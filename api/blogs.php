@@ -111,9 +111,9 @@ try {
                 
                 echo json_encode(['blog' => $blog]);
             } elseif (isset($pathParts[1]) && $pathParts[1] === 'blogs' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
-                // Get single blog by ID
+                // Get single blog by ID (allow both published and draft for preview)
                 $blogId = $pathParts[2];
-                $stmt = $pdo->prepare("SELECT * FROM blogs WHERE id = ? AND status = 'published'");
+                $stmt = $pdo->prepare("SELECT * FROM blogs WHERE id = ?");
                 $stmt->execute([$blogId]);
                 $blog = $stmt->fetch(PDO::FETCH_ASSOC);
                 
