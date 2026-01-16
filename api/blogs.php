@@ -138,7 +138,7 @@ try {
         case 'POST':
             // Admin only - create new blog
             $user = AuthMiddleware::authenticate();
-            if (!$user || $user['role'] !== 'admin') {
+            if (!$user || strtolower($user['role']) !== 'admin') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Admin access required']);
                 exit();
@@ -185,7 +185,7 @@ try {
         case 'PUT':
             // Admin only - update blog
             $user = AuthMiddleware::authenticate();
-            if (!$user || $user['role'] !== 'admin') {
+            if (!$user || strtolower($user['role']) !== 'admin') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Admin access required']);
                 exit();
@@ -231,7 +231,7 @@ try {
         case 'DELETE':
             // Admin only - delete blog
             $user = AuthMiddleware::authenticate();
-            if (!$user || $user['role'] !== 'admin') {
+            if (!$user || strtolower($user['role']) !== 'admin') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Admin access required']);
                 exit();
