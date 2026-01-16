@@ -53,11 +53,22 @@ try {
     
     // Add slug and meta_tags columns if they don't exist
     try {
-        $pdo->exec("ALTER TABLE blogs ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE");
-        $pdo->exec("ALTER TABLE blogs ADD COLUMN IF NOT EXISTS meta_tags TEXT");
+        // Check if slug column exists
+        $result = $pdo->query("SHOW COLUMNS FROM blogs LIKE 'slug'");
+        if ($result->rowCount() == 0) {
+            $pdo->exec("ALTER TABLE blogs ADD COLUMN slug VARCHAR(255) UNIQUE AFTER title");
+        }
+        
+        // Check if meta_tags column exists
+        $result = $pdo->query("SHOW COLUMNS FROM blogs LIKE 'meta_tags'");
+        if ($result->rowCount() == 0) {
+            $pdo->exec("ALTER TABLE blogs ADD COLUMN meta_tags TEXT AFTER video_url");
+        }
+        
+        // Create index if not exists
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_slug ON blogs(slug)");
     } catch (Exception $e) {
-        // Columns might already exist, ignore error
+        error_log('Migration error: ' . $e->getMessage());
     }
 
     switch ($method) {
