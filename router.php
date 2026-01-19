@@ -29,6 +29,9 @@ if ($path === '/api/auth/login' || $path === '/api/auth/register') {
 } elseif (strpos($path, '/api/branches') === 0) {
     $_SERVER['PATH_INFO'] = str_replace('/api/branches', '', $path);
     include 'api/branches.php';
+} elseif (strpos($path, '/api/bankers') === 0) {
+    $_SERVER['PATH_INFO'] = str_replace('/api/bankers', '', $path);
+    include 'api/bankers.php';
 } elseif ($path === '/api/validate') {
     include 'api/validate.php';
 } elseif ($path === '/') {

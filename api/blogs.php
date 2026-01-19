@@ -13,9 +13,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once '../config/database.php';
-require_once '../middleware/auth.php';
-require_once '../middleware/cors.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/jwt.php';
+
+function authenticate() {
+    $headers = getallheaders();
+    $token = null;
+
+    if (isset($headers['Authorization'])) {
+        $auth_header = $headers['Authorization'];
+        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+            $token = $matches[1];
+        }
+    }
+
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['error' => 'No token provided']);
+        exit();
+    }
+
+    $decoded = JWT::decode($token);
+    if (!$decoded) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
+        exit();
+    }
+
+    return $decoded;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -148,8 +174,8 @@ try {
 
         case 'POST':
             // Admin only - create new blog
-            $user = AuthMiddleware::authenticate();
-            if (!$user || strtolower($user['role']) !== 'admin') {
+            $user = authenticate();
+            if (!$user || $user['role'] !== 'ADMIN') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Admin access required']);
                 exit();
@@ -195,8 +221,8 @@ try {
 
         case 'PUT':
             // Admin only - update blog
-            $user = AuthMiddleware::authenticate();
-            if (!$user || strtolower($user['role']) !== 'admin') {
+            $user = authenticate();
+            if (!$user || $user['role'] !== 'ADMIN') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Admin access required']);
                 exit();
@@ -241,8 +267,8 @@ try {
 
         case 'DELETE':
             // Admin only - delete blog
-            $user = AuthMiddleware::authenticate();
-            if (!$user || strtolower($user['role']) !== 'admin') {
+            $user = authenticate();
+            if (!$user || $user['role'] !== 'ADMIN') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Admin access required']);
                 exit();

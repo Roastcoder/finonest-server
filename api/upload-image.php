@@ -8,8 +8,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../config/database.php';
-require_once '../config/auth.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/jwt.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -18,21 +18,40 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Verify admin authentication
-$headers = getallheaders();
-$authHeader = $headers['Authorization'] ?? '';
+function authenticate() {
+    $headers = getallheaders();
+    $token = null;
 
-if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
+    if (isset($headers['Authorization'])) {
+        $auth_header = $headers['Authorization'];
+        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+            $token = $matches[1];
+        }
+    }
+
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['error' => 'No token provided']);
+        exit();
+    }
+
+    $decoded = JWT::decode($token);
+    if (!$decoded) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
+        exit();
+    }
+
+    if ($decoded['role'] !== 'ADMIN') {
+        http_response_code(403);
+        echo json_encode(['error' => 'Admin access required']);
+        exit();
+    }
+
+    return $decoded;
 }
 
-$token = substr($authHeader, 7);
-if (!verifyAdminToken($token)) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Invalid token']);
-    exit;
-}
+$user = authenticate();
 
 // Check if file was uploaded
 if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
@@ -60,7 +79,7 @@ if ($file['size'] > $maxSize) {
 }
 
 // Create uploads directory if it doesn't exist
-$uploadDir = '../uploads/blog-images/';
+$uploadDir = __DIR__ . '/../uploads/blog-images/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }
@@ -73,7 +92,7 @@ $filepath = $uploadDir . $filename;
 // Move uploaded file
 if (move_uploaded_file($file['tmp_name'], $filepath)) {
     // Return the URL path for the uploaded image
-    $imageUrl = 'https://api.finonest.com/uploads/blog-images/' . $filename;
+    $imageUrl = '/uploads/blog-images/' . $filename;
     
     echo json_encode([
         'success' => true,
