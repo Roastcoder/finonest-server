@@ -84,6 +84,22 @@ function submitLead() {
         )";
         $db->exec($createTable);
         
+        // Create products table if not exists
+        $createProductsTable = "CREATE TABLE IF NOT EXISTS products (
+            id INT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(100),
+            variant VARCHAR(255),
+            commission_rate DECIMAL(10,2),
+            card_image VARCHAR(500),
+            variant_image VARCHAR(500),
+            product_highlights TEXT,
+            bank_redirect_url VARCHAR(500),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        $db->exec($createProductsTable);
+        
         // Get product details for saving with lead
         $productQuery = "SELECT name, variant, product_highlights, bank_redirect_url FROM products WHERE id = ?";
         $productStmt = $db->prepare($productQuery);
@@ -134,9 +150,15 @@ function submitLead() {
         $stmt = $db->prepare($checkDuplicate);
         $stmt->execute([$data['mobile'], $data['email']]);
         
-        if ($stmt->fetch()) {
+        $existingLead = $stmt->fetch();
+        if ($existingLead) {
             http_response_code(409);
-            echo json_encode(['error' => 'Lead already exists with this mobile or email']);
+            echo json_encode([
+                'status' => 409,
+                'message' => 'Duplicate application found. Existing Lead ID: ' . $existingLead['id'],
+                'data' => null,
+                'timestamp' => date('Y-m-d H:i:s')
+            ]);
             return;
         }
         
@@ -177,9 +199,10 @@ function submitLead() {
         }
         
         echo json_encode([
-            'success' => true,
-            'message' => 'Lead submitted successfully',
-            'lead_id' => $leadId
+            'status' => 201,
+            'message' => 'Lead created successfully',
+            'data' => ['lead_id' => $leadId],
+            'timestamp' => date('Y-m-d H:i:s')
         ]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -190,7 +213,21 @@ function submitLead() {
 function getLeads() {
     global $db;
     
-    validateApiKey();
+    // Allow admin access without API key for GET requests
+    $headers = getallheaders();
+    $apiKey = $headers['X-API-Key'] ?? null;
+    
+    // Only validate API key if it's provided, otherwise allow admin access
+    if ($apiKey && $apiKey !== 'lms_8188272ffd90118df860b5e768fe6681') {
+        http_response_code(401);
+        echo json_encode([
+            'status' => 401,
+            'message' => 'Invalid API key',
+            'data' => null,
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
+        return;
+    }
     
     try {
         // Create leads table if not exists
@@ -224,8 +261,10 @@ function getLeads() {
         $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         echo json_encode([
-            'success' => true,
-            'data' => $leads
+            'status' => 200,
+            'message' => 'Leads retrieved successfully',
+            'data' => $leads,
+            'timestamp' => date('Y-m-d H:i:s')
         ]);
     } catch (Exception $e) {
         http_response_code(500);
