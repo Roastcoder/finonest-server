@@ -33,6 +33,9 @@ switch($method) {
     case 'GET':
         getLeads();
         break;
+    case 'PUT':
+        updateLeadStatus();
+        break;
     default:
         http_response_code(405);
         echo json_encode(['error' => 'Method not allowed']);
@@ -154,6 +157,25 @@ function submitLead() {
         
         $leadId = $db->lastInsertId();
         
+        // Also save to external cards API
+        try {
+            $externalData = $data;
+            $externalData['lead_id'] = $leadId;
+            
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "Content-Type: application/json\r\n" .
+                               "X-API-Key: lms_8188272ffd90118df860b5e768fe6681\r\n",
+                    'content' => json_encode($externalData)
+                ]
+            ]);
+            
+            file_get_contents('https://cards.finonest.com/api/leads', false, $context);
+        } catch (Exception $e) {
+            // Continue even if external API fails
+        }
+        
         echo json_encode([
             'success' => true,
             'message' => 'Lead submitted successfully',
@@ -170,8 +192,104 @@ function getLeads() {
     
     validateApiKey();
     
-    // Only allow admin access for leads
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied']);
+    try {
+        // Create leads table if not exists
+        $createTable = "CREATE TABLE IF NOT EXISTS leads (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            external_id INT,
+            name VARCHAR(255) NOT NULL,
+            mobile VARCHAR(15) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            product_id INT NOT NULL,
+            product_name VARCHAR(255),
+            product_variant VARCHAR(255),
+            product_highlights TEXT,
+            bank_redirect_url VARCHAR(500),
+            channel_code VARCHAR(50) NOT NULL,
+            status ENUM('new', 'contacted', 'qualified', 'converted', 'rejected') DEFAULT 'new',
+            source VARCHAR(100) DEFAULT 'API',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_mobile (mobile),
+            INDEX idx_email (email),
+            INDEX idx_channel (channel_code),
+            INDEX idx_external (external_id)
+        )";
+        $db->exec($createTable);
+        
+        $query = "SELECT * FROM leads ORDER BY created_at DESC";
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+        $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $leads
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to fetch leads']);
+    }
+}
+
+function updateLeadStatus() {
+    global $db;
+    
+    validateApiKey();
+    
+    // Get lead ID from URL path
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $pathParts = explode('/', trim($path, '/'));
+    $leadId = null;
+    
+    // Look for lead ID in path like /api/leads/123/status
+    for ($i = 0; $i < count($pathParts); $i++) {
+        if ($pathParts[$i] === 'leads' && isset($pathParts[$i + 1]) && is_numeric($pathParts[$i + 1])) {
+            $leadId = (int)$pathParts[$i + 1];
+            break;
+        }
+    }
+    
+    if (!$leadId) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Lead ID is required']);
+        return;
+    }
+    
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    if (!isset($data['status'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Status is required']);
+        return;
+    }
+    
+    $validStatuses = ['new', 'contacted', 'qualified', 'converted', 'rejected'];
+    if (!in_array($data['status'], $validStatuses)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid status']);
+        return;
+    }
+    
+    try {
+        $query = "UPDATE leads SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$data['status'], $leadId]);
+        
+        if ($stmt->rowCount() === 0) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Lead not found']);
+            return;
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Lead status updated successfully'
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update lead status']);
+    }
 }
 ?>
