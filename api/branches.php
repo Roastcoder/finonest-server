@@ -56,7 +56,9 @@ switch($method) {
         createBranch();
         break;
     case 'PUT':
-        if (isset($request[0])) {
+        if (isset($request[0]) && isset($request[1]) && $request[1] === 'position') {
+            updateBranchPosition($request[0]);
+        } elseif (isset($request[0])) {
             updateBranch($request[0]);
         }
         break;
@@ -225,6 +227,37 @@ function deleteBranch($id) {
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to delete branch']);
+    }
+}
+
+function updateBranchPosition($id) {
+    global $db;
+    
+    requireAdmin();
+    
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    try {
+        $query = "UPDATE branches SET x_position = ?, y_position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([
+            $data['x_position'],
+            $data['y_position'],
+            $id
+        ]);
+        
+        if ($stmt->rowCount() > 0) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Branch position updated successfully'
+            ]);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Branch not found']);
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update branch position']);
     }
 }
 ?>
