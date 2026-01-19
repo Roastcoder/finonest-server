@@ -59,6 +59,7 @@ function submitLead() {
         // Create leads table if not exists
         $createTable = "CREATE TABLE IF NOT EXISTS leads (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            external_id INT,
             name VARCHAR(255) NOT NULL,
             mobile VARCHAR(15) NOT NULL,
             email VARCHAR(255) NOT NULL,
@@ -75,7 +76,8 @@ function submitLead() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_mobile (mobile),
             INDEX idx_email (email),
-            INDEX idx_channel (channel_code)
+            INDEX idx_channel (channel_code),
+            INDEX idx_external (external_id)
         )";
         $db->exec($createTable);
         
