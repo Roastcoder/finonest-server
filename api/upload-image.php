@@ -51,12 +51,18 @@ function authenticate() {
     return $decoded;
 }
 
+// Debug logging
+error_log('Upload request received');
+error_log('FILES: ' . print_r($_FILES, true));
+error_log('Headers: ' . print_r(getallheaders(), true));
+
 $user = authenticate();
 
 // Check if file was uploaded
 if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+    error_log('File upload error: ' . ($_FILES['image']['error'] ?? 'No file'));
     http_response_code(400);
-    echo json_encode(['error' => 'No file uploaded or upload error']);
+    echo json_encode(['error' => 'No file uploaded or upload error', 'debug' => $_FILES]);
     exit;
 }
 
@@ -80,8 +86,17 @@ if ($file['size'] > $maxSize) {
 
 // Create uploads directory if it doesn't exist
 $uploadDir = __DIR__ . '/../uploads/blog-images/';
+error_log('Upload directory: ' . $uploadDir);
 if (!is_dir($uploadDir)) {
+    error_log('Creating upload directory');
     mkdir($uploadDir, 0755, true);
+}
+
+if (!is_writable($uploadDir)) {
+    error_log('Upload directory not writable');
+    http_response_code(500);
+    echo json_encode(['error' => 'Upload directory not writable']);
+    exit;
 }
 
 // Generate unique filename
@@ -91,6 +106,7 @@ $filepath = $uploadDir . $filename;
 
 // Move uploaded file
 if (move_uploaded_file($file['tmp_name'], $filepath)) {
+    error_log('File uploaded successfully: ' . $filepath);
     // Return the URL path for the uploaded image
     $imageUrl = '/uploads/blog-images/' . $filename;
     
@@ -100,6 +116,7 @@ if (move_uploaded_file($file['tmp_name'], $filepath)) {
         'filename' => $filename
     ]);
 } else {
+    error_log('Failed to move uploaded file from ' . $file['tmp_name'] . ' to ' . $filepath);
     http_response_code(500);
     echo json_encode(['error' => 'Failed to upload file']);
 }
