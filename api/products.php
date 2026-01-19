@@ -14,7 +14,7 @@ function validateApiKey() {
     $headers = getallheaders();
     $apiKey = $headers['X-API-Key'] ?? null;
     
-    if (!$apiKey || $apiKey !== 'FINONEST_API_KEY_2024') {
+    if (!$apiKey || $apiKey !== 'lms_8188272ffd90118df860b5e768fe6681') {
         http_response_code(401);
         echo json_encode(['error' => 'Invalid API key']);
         exit();
