@@ -237,27 +237,67 @@ try {
             $blogId = $pathParts[2];
             $input = json_decode(file_get_contents('php://input'), true);
             
-            // Generate slug from title
-            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $input['title']), '-'));
-
-            $stmt = $pdo->prepare("
-                UPDATE blogs 
-                SET title = ?, slug = ?, excerpt = ?, content = ?, category = ?, status = ?, image_url = ?, video_url = ?, meta_tags = ?
-                WHERE id = ?
-            ");
+            // Build dynamic query - only update fields that are provided
+            $updateFields = [];
+            $params = [];
             
-            $stmt->execute([
-                $input['title'],
-                $slug,
-                $input['excerpt'],
-                $input['content'],
-                $input['category'],
-                $input['status'] ?? 'draft',
-                $input['image_url'] ?? null,
-                $input['video_url'] ?? null,
-                $input['meta_tags'] ?? null,
-                $blogId
-            ]);
+            if (isset($input['title']) && !empty($input['title'])) {
+                $updateFields[] = "title = ?";
+                $params[] = $input['title'];
+                
+                // Generate slug from title
+                $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $input['title']), '-'));
+                $updateFields[] = "slug = ?";
+                $params[] = $slug;
+            }
+            
+            if (isset($input['excerpt'])) {
+                $updateFields[] = "excerpt = ?";
+                $params[] = $input['excerpt'];
+            }
+            
+            if (isset($input['content'])) {
+                $updateFields[] = "content = ?";
+                $params[] = $input['content'];
+            }
+            
+            if (isset($input['category'])) {
+                $updateFields[] = "category = ?";
+                $params[] = $input['category'];
+            }
+            
+            if (isset($input['status'])) {
+                $updateFields[] = "status = ?";
+                $params[] = $input['status'];
+            }
+            
+            if (isset($input['image_url'])) {
+                $updateFields[] = "image_url = ?";
+                $params[] = $input['image_url'] ?: null;
+            }
+            
+            if (isset($input['video_url'])) {
+                $updateFields[] = "video_url = ?";
+                $params[] = $input['video_url'] ?: null;
+            }
+            
+            if (isset($input['meta_tags'])) {
+                $updateFields[] = "meta_tags = ?";
+                $params[] = $input['meta_tags'] ?: null;
+            }
+            
+            if (empty($updateFields)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'No fields to update']);
+                exit();
+            }
+            
+            $updateFields[] = "updated_at = CURRENT_TIMESTAMP";
+            $query = "UPDATE blogs SET " . implode(', ', $updateFields) . " WHERE id = ?";
+            $params[] = $blogId;
+
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
 
             echo json_encode([
                 'success' => true,

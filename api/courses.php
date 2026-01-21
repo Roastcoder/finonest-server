@@ -316,51 +316,83 @@ function updateCourse($id) {
         }
         
         // Get form data from $_POST for multipart
-        $title = $_POST['title'] ?? '';
-        $description = $_POST['description'] ?? '';
-        $duration = $_POST['duration'] ?? '';
-        $lessons = intval($_POST['lessons'] ?? 0);
-        $level = $_POST['level'] ?? 'Beginner';
-        $status = $_POST['status'] ?? 'active';
-        $price = floatval($_POST['price'] ?? 0);
+        $title = $_POST['title'] ?? null;
+        $description = $_POST['description'] ?? null;
+        $duration = $_POST['duration'] ?? null;
+        $lessons = isset($_POST['lessons']) ? intval($_POST['lessons']) : null;
+        $level = $_POST['level'] ?? null;
+        $status = $_POST['status'] ?? null;
+        $price = isset($_POST['price']) ? floatval($_POST['price']) : null;
         $original_price = !empty($_POST['original_price']) ? floatval($_POST['original_price']) : null;
     } else {
         // Handle JSON data
         $input = json_decode(file_get_contents('php://input'), true);
-        $title = $input['title'] ?? '';
-        $description = $input['description'] ?? '';
-        $duration = $input['duration'] ?? '';
-        $lessons = intval($input['lessons'] ?? 0);
-        $level = $input['level'] ?? 'Beginner';
-        $status = $input['status'] ?? 'active';
-        $price = floatval($input['price'] ?? 0);
+        $title = $input['title'] ?? null;
+        $description = $input['description'] ?? null;
+        $duration = $input['duration'] ?? null;
+        $lessons = isset($input['lessons']) ? intval($input['lessons']) : null;
+        $level = $input['level'] ?? null;
+        $status = $input['status'] ?? null;
+        $price = isset($input['price']) ? floatval($input['price']) : null;
         $original_price = !empty($input['original_price']) ? floatval($input['original_price']) : null;
         $imagePath = null;
         $videoPath = null;
     }
     
-    if (empty($title) || empty($description)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Title and description are required']);
-        return;
-    }
-    
     try {
-        // Build dynamic query based on uploaded files
-        $updateFields = "title = ?, description = ?, duration = ?, lessons = ?, level = ?, status = ?, price = ?, original_price = ?";
-        $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price];
+        // Build dynamic query - only update fields that are provided
+        $updateFields = [];
+        $params = [];
         
+        if ($title !== null) {
+            $updateFields[] = "title = ?";
+            $params[] = $title;
+        }
+        if ($description !== null) {
+            $updateFields[] = "description = ?";
+            $params[] = $description;
+        }
+        if ($duration !== null) {
+            $updateFields[] = "duration = ?";
+            $params[] = $duration;
+        }
+        if ($lessons !== null) {
+            $updateFields[] = "lessons = ?";
+            $params[] = $lessons;
+        }
+        if ($level !== null) {
+            $updateFields[] = "level = ?";
+            $params[] = $level;
+        }
+        if ($status !== null) {
+            $updateFields[] = "status = ?";
+            $params[] = $status;
+        }
+        if ($price !== null) {
+            $updateFields[] = "price = ?";
+            $params[] = $price;
+        }
+        if ($original_price !== null) {
+            $updateFields[] = "original_price = ?";
+            $params[] = $original_price;
+        }
         if ($imagePath) {
-            $updateFields .= ", image_path = ?";
+            $updateFields[] = "image_path = ?";
             $params[] = $imagePath;
         }
-        
         if ($videoPath) {
-            $updateFields .= ", video_path = ?";
+            $updateFields[] = "video_path = ?";
             $params[] = $videoPath;
         }
         
-        $query = "UPDATE courses SET {$updateFields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        if (empty($updateFields)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'No fields to update']);
+            return;
+        }
+        
+        $updateFields[] = "updated_at = CURRENT_TIMESTAMP";
+        $query = "UPDATE courses SET " . implode(', ', $updateFields) . " WHERE id = ?";
         $params[] = $id;
         
         $stmt = $db->prepare($query);
