@@ -64,11 +64,12 @@ function requireAdmin() {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-$request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
+$path_info = $_SERVER['PATH_INFO'] ?? '';
+$request = explode('/', trim($path_info, '/'));
 
 // Debug: log the request path
 error_log('Request method: ' . $method);
-error_log('Request path: ' . ($_SERVER['PATH_INFO'] ?? 'empty'));
+error_log('PATH_INFO: ' . $path_info);
 error_log('Request array: ' . print_r($request, true));
 
 switch($method) {
@@ -85,16 +86,20 @@ switch($method) {
     case 'PUT':
         if (isset($request[0]) && isset($request[1]) && $request[1] === 'position') {
             updateBranchPosition($request[0]);
-        } elseif (isset($request[0])) {
+        } elseif (isset($request[0]) && !empty($request[0])) {
             updateBranch($request[0]);
         }
         break;
     case 'DELETE':
-        if (isset($request[0]) && !empty($request[0])) {
+        if (isset($request[0]) && !empty($request[0]) && is_numeric($request[0])) {
             deleteBranch($request[0]);
         } else {
             http_response_code(400);
-            echo json_encode(['error' => 'Branch ID required for deletion']);
+            echo json_encode([
+                'error' => 'Branch ID required for deletion',
+                'path_info' => $path_info,
+                'request' => $request
+            ]);
         }
         break;
     default:
