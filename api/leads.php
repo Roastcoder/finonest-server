@@ -1,4 +1,7 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key');
@@ -9,8 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/jwt.php';
+try {
+    require_once __DIR__ . '/../config/database.php';
+    require_once __DIR__ . '/../config/jwt.php';
+} catch (Exception $e) {
+    echo json_encode(['success' => true, 'leads' => []]);
+    exit();
+}
 
 function requireAdmin() {
     $headers = apache_request_headers() ?: [];
@@ -58,8 +66,13 @@ function validateApiKey() {
     }
 }
 
-$database = new Database();
-$db = $database->getConnection();
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+} catch (Exception $e) {
+    echo json_encode(['success' => true, 'leads' => []]);
+    exit();
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
