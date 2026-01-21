@@ -344,13 +344,24 @@ function updateBranchPosition($id) {
     
     try {
         // First check if the branch exists
-        $checkQuery = "SELECT id FROM branches WHERE id = ?";
+        $checkQuery = "SELECT id, name FROM branches WHERE id = ?";
         $checkStmt = $db->prepare($checkQuery);
         $checkStmt->execute([$id]);
+        $branch = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($checkStmt->rowCount() === 0) {
+        if (!$branch) {
+            // Let's also check what branches exist
+            $allQuery = "SELECT id, name FROM branches LIMIT 5";
+            $allStmt = $db->prepare($allQuery);
+            $allStmt->execute();
+            $allBranches = $allStmt->fetchAll(PDO::FETCH_ASSOC);
+            
             http_response_code(404);
-            echo json_encode(['error' => 'Branch not found']);
+            echo json_encode([
+                'error' => 'Branch not found', 
+                'requested_id' => $id,
+                'available_branches' => $allBranches
+            ]);
             return;
         }
         
@@ -376,15 +387,13 @@ function updateBranchPosition($id) {
             $id
         ]);
         
-        if ($stmt->rowCount() > 0) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Branch position updated successfully'
-            ]);
-        } else {
-            http_response_code(404);
-            echo json_encode(['error' => 'Branch not found or no changes made']);
-        }
+        echo json_encode([
+            'success' => true,
+            'message' => 'Branch position updated successfully',
+            'branch' => $branch['name'],
+            'position' => ['x' => $data['x_position'], 'y' => $data['y_position']]
+        ]);
+        
     } catch (PDOException $e) {
         error_log('Database error in updateBranchPosition: ' . $e->getMessage());
         http_response_code(500);
