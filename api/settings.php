@@ -201,6 +201,7 @@ function updateSetting($key) {
     $value = $input['value'] ?? '';
     
     try {
+        // First try to update existing setting
         $query = "UPDATE system_settings SET setting_value = ? WHERE setting_key = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([$value, $key]);
@@ -211,8 +212,16 @@ function updateSetting($key) {
                 'message' => 'Setting updated successfully'
             ]);
         } else {
-            http_response_code(404);
-            echo json_encode(['error' => 'Setting not found']);
+            // Setting doesn't exist, create it
+            $insertQuery = "INSERT INTO system_settings (setting_key, setting_value, description) VALUES (?, ?, ?)";
+            $insertStmt = $db->prepare($insertQuery);
+            $description = $key === 'razorpay_secret' ? 'Razorpay Secret Key (keep secure)' : '';
+            $insertStmt->execute([$key, $value, $description]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Setting created successfully'
+            ]);
         }
     } catch (Exception $e) {
         error_log('Error in updateSetting: ' . $e->getMessage());
