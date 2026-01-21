@@ -103,6 +103,9 @@ $path = parse_url($request_uri, PHP_URL_PATH);
 if (preg_match('/\/api\/settings\/(.+)/', $path, $matches)) {
     $setting_key = $matches[1];
     
+    // Normalize key (convert hyphens to underscores)
+    $setting_key = str_replace('-', '_', $setting_key);
+    
     switch($method) {
         case 'GET':
             getSetting($setting_key);
