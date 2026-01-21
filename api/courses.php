@@ -273,25 +273,41 @@ function updateCourse($id) {
     
     requireAdmin();
     
-    // Handle file uploads
-    $imagePath = null;
-    $videoPath = null;
+    // For PUT requests, we need to parse the input differently
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
     
-    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $imagePath = handleFileUpload($_FILES['image'], 'images');
+    if (strpos($contentType, 'multipart/form-data') !== false) {
+        // Handle multipart form data for PUT requests
+        $imagePath = null;
+        $videoPath = null;
+        
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $imagePath = handleFileUpload($_FILES['image'], 'images');
+        }
+        
+        if (isset($_FILES['video']) && $_FILES['video']['error'] === UPLOAD_ERR_OK) {
+            $videoPath = handleFileUpload($_FILES['video'], 'videos');
+        }
+        
+        // Get form data from $_POST for multipart
+        $title = $_POST['title'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $duration = $_POST['duration'] ?? '';
+        $lessons = intval($_POST['lessons'] ?? 0);
+        $level = $_POST['level'] ?? 'Beginner';
+        $status = $_POST['status'] ?? 'active';
+    } else {
+        // Handle JSON data
+        $input = json_decode(file_get_contents('php://input'), true);
+        $title = $input['title'] ?? '';
+        $description = $input['description'] ?? '';
+        $duration = $input['duration'] ?? '';
+        $lessons = intval($input['lessons'] ?? 0);
+        $level = $input['level'] ?? 'Beginner';
+        $status = $input['status'] ?? 'active';
+        $imagePath = null;
+        $videoPath = null;
     }
-    
-    if (isset($_FILES['video']) && $_FILES['video']['error'] === UPLOAD_ERR_OK) {
-        $videoPath = handleFileUpload($_FILES['video'], 'videos');
-    }
-    
-    // Get form data
-    $title = $_POST['title'] ?? '';
-    $description = $_POST['description'] ?? '';
-    $duration = $_POST['duration'] ?? '';
-    $lessons = intval($_POST['lessons'] ?? 0);
-    $level = $_POST['level'] ?? 'Beginner';
-    $status = $_POST['status'] ?? 'active';
     
     if (empty($title) || empty($description)) {
         http_response_code(400);
@@ -338,7 +354,7 @@ function updateCourse($id) {
     } catch (Exception $e) {
         error_log('Error in updateCourse: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to update course']);
+        echo json_encode(['error' => 'Failed to update course: ' . $e->getMessage()]);
     }
 }
 
