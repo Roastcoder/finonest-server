@@ -64,17 +64,24 @@ function requireAdmin() {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-$path_info = $_SERVER['PATH_INFO'] ?? '';
-$request = explode('/', trim($path_info, '/'));
+$request_uri = $_SERVER['REQUEST_URI'];
+$path = parse_url($request_uri, PHP_URL_PATH);
 
-// Debug: log the request path
+// Extract ID from URL like /api/branches/5
+if (preg_match('/\/api\/branches\/(\d+)/', $path, $matches)) {
+    $branch_id = $matches[1];
+} else {
+    $branch_id = null;
+}
+
+// Debug: log the request
 error_log('Request method: ' . $method);
-error_log('PATH_INFO: ' . $path_info);
-error_log('Request array: ' . print_r($request, true));
+error_log('Request URI: ' . $request_uri);
+error_log('Extracted branch ID: ' . ($branch_id ?? 'none'));
 
 switch($method) {
     case 'GET':
-        if (isset($request[0]) && $request[0] === 'admin') {
+        if (strpos($path, '/admin') !== false) {
             getAllBranchesAdmin();
         } else {
             getAllBranches();
@@ -84,21 +91,21 @@ switch($method) {
         createBranch();
         break;
     case 'PUT':
-        if (isset($request[0]) && isset($request[1]) && $request[1] === 'position') {
-            updateBranchPosition($request[0]);
-        } elseif (isset($request[0]) && !empty($request[0])) {
-            updateBranch($request[0]);
+        if (strpos($path, '/position') !== false && $branch_id) {
+            updateBranchPosition($branch_id);
+        } elseif ($branch_id) {
+            updateBranch($branch_id);
         }
         break;
     case 'DELETE':
-        if (isset($request[0]) && !empty($request[0]) && is_numeric($request[0])) {
-            deleteBranch($request[0]);
+        if ($branch_id) {
+            deleteBranch($branch_id);
         } else {
             http_response_code(400);
             echo json_encode([
                 'error' => 'Branch ID required for deletion',
-                'path_info' => $path_info,
-                'request' => $request
+                'path' => $path,
+                'uri' => $request_uri
             ]);
         }
         break;
