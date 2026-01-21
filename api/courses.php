@@ -79,6 +79,8 @@ try {
         lessons INT DEFAULT 0,
         level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
         status ENUM('active', 'inactive') DEFAULT 'active',
+        image_path VARCHAR(500),
+        video_path VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )";
@@ -116,6 +118,24 @@ function getAllCourses() {
     requireAdmin();
     
     try {
+        // Check if courses table exists
+        $checkTable = $db->query("SHOW TABLES LIKE 'courses'");
+        if ($checkTable->rowCount() === 0) {
+            // Create table if it doesn't exist
+            $createTable = "CREATE TABLE courses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                duration VARCHAR(100),
+                lessons INT DEFAULT 0,
+                level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
+                status ENUM('active', 'inactive') DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )";
+            $db->exec($createTable);
+        }
+        
         $query = "SELECT * FROM courses ORDER BY created_at DESC";
         $stmt = $db->prepare($query);
         $stmt->execute();
@@ -123,12 +143,17 @@ function getAllCourses() {
         
         echo json_encode([
             'success' => true,
-            'courses' => $courses
+            'courses' => $courses,
+            'table_created' => $checkTable->rowCount() === 0
         ]);
+    } catch (PDOException $e) {
+        error_log('Database error in getAllCourses: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     } catch (Exception $e) {
         error_log('Error in getAllCourses: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch courses']);
+        echo json_encode(['error' => 'Failed to fetch courses: ' . $e->getMessage()]);
     }
 }
 
@@ -137,35 +162,46 @@ function createCourse() {
     
     requireAdmin();
     
-    $data = json_decode(file_get_contents("php://input"), true);
+    // Handle file uploads
+    $imagePath = null;
+    $videoPath = null;
     
-    if (!$data) {
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $imagePath = handleFileUpload($_FILES['image'], 'images');
+    }
+    
+    if (isset($_FILES['video']) && $_FILES['video']['error'] === UPLOAD_ERR_OK) {
+        $videoPath = handleFileUpload($_FILES['video'], 'videos');
+    }
+    
+    // Get form data
+    $title = $_POST['title'] ?? '';
+    $description = $_POST['description'] ?? '';
+    $duration = $_POST['duration'] ?? '';
+    $lessons = intval($_POST['lessons'] ?? 0);
+    $level = $_POST['level'] ?? 'Beginner';
+    $status = $_POST['status'] ?? 'active';
+    
+    if (empty($title) || empty($description)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid JSON data']);
+        echo json_encode(['error' => 'Title and description are required']);
         return;
     }
     
-    $required_fields = ['title', 'description'];
-    foreach ($required_fields as $field) {
-        if (!isset($data[$field]) || empty($data[$field])) {
-            http_response_code(400);
-            echo json_encode(['error' => "Field '$field' is required"]);
-            return;
-        }
-    }
-    
     try {
-        $query = "INSERT INTO courses (title, description, duration, lessons, level, status) 
-                  VALUES (?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO courses (title, description, duration, lessons, level, status, image_path, video_path) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $db->prepare($query);
         $stmt->execute([
-            $data['title'],
-            $data['description'],
-            $data['duration'] ?? '',
-            $data['lessons'] ?? 0,
-            $data['level'] ?? 'Beginner',
-            $data['status'] ?? 'active'
+            $title,
+            $description,
+            $duration,
+            $lessons,
+            $level,
+            $status,
+            $imagePath,
+            $videoPath
         ]);
         
         echo json_encode([
@@ -180,34 +216,93 @@ function createCourse() {
     }
 }
 
+function handleFileUpload($file, $type) {
+    $uploadDir = __DIR__ . '/../uploads/' . $type . '/';
+    
+    // Create directory if it doesn't exist
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+    
+    // Validate file type
+    $allowedTypes = [
+        'images' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        'videos' => ['video/mp4', 'video/avi', 'video/mov', 'video/wmv']
+    ];
+    
+    if (!in_array($file['type'], $allowedTypes[$type])) {
+        throw new Exception('Invalid file type');
+    }
+    
+    // Generate unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = uniqid() . '_' . time() . '.' . $extension;
+    $filepath = $uploadDir . $filename;
+    
+    if (move_uploaded_file($file['tmp_name'], $filepath)) {
+        return 'uploads/' . $type . '/' . $filename;
+    }
+    
+    throw new Exception('Failed to upload file');
+}
+
 function updateCourse($id) {
     global $db;
     
     requireAdmin();
     
-    $data = json_decode(file_get_contents("php://input"), true);
+    // Handle file uploads
+    $imagePath = null;
+    $videoPath = null;
     
-    if (!$data) {
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $imagePath = handleFileUpload($_FILES['image'], 'images');
+    }
+    
+    if (isset($_FILES['video']) && $_FILES['video']['error'] === UPLOAD_ERR_OK) {
+        $videoPath = handleFileUpload($_FILES['video'], 'videos');
+    }
+    
+    // Get form data
+    $title = $_POST['title'] ?? '';
+    $description = $_POST['description'] ?? '';
+    $duration = $_POST['duration'] ?? '';
+    $lessons = intval($_POST['lessons'] ?? 0);
+    $level = $_POST['level'] ?? 'Beginner';
+    $status = $_POST['status'] ?? 'active';
+    
+    if (empty($title) || empty($description)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid JSON data']);
+        echo json_encode(['error' => 'Title and description are required']);
         return;
     }
     
     try {
-        $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                  level = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
-                  WHERE id = ?";
+        // Build query based on whether files are uploaded
+        if ($imagePath && $videoPath) {
+            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
+                      level = ?, status = ?, image_path = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
+                      WHERE id = ?";
+            $params = [$title, $description, $duration, $lessons, $level, $status, $imagePath, $videoPath, $id];
+        } elseif ($imagePath) {
+            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
+                      level = ?, status = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP 
+                      WHERE id = ?";
+            $params = [$title, $description, $duration, $lessons, $level, $status, $imagePath, $id];
+        } elseif ($videoPath) {
+            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
+                      level = ?, status = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
+                      WHERE id = ?";
+            $params = [$title, $description, $duration, $lessons, $level, $status, $videoPath, $id];
+        } else {
+            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
+                      level = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
+                      WHERE id = ?";
+            $params = [$title, $description, $duration, $lessons, $level, $status, $id];
+        }
         
         $stmt = $db->prepare($query);
-        $stmt->execute([
-            $data['title'],
-            $data['description'],
-            $data['duration'] ?? '',
-            $data['lessons'] ?? 0,
-            $data['level'] ?? 'Beginner',
-            $data['status'] ?? 'active',
-            $id
-        ]);
+        $stmt->execute($params);
         
         if ($stmt->rowCount() > 0) {
             echo json_encode([
