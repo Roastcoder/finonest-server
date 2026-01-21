@@ -116,10 +116,13 @@ function getAllEnrollments() {
         $stmt->execute();
         $enrollments = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Parse JSON student_info for each enrollment
+        // Parse JSON fields for each enrollment
         foreach ($enrollments as &$enrollment) {
             if ($enrollment['student_info']) {
                 $enrollment['student_info'] = json_decode($enrollment['student_info'], true);
+            }
+            if ($enrollment['payment_details']) {
+                $enrollment['payment_details'] = json_decode($enrollment['payment_details'], true);
             }
         }
         

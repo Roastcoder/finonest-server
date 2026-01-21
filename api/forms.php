@@ -124,6 +124,7 @@ function handleCourseEnrollment($auth_user, $enrollment_data) {
             amount_paid DECIMAL(10,2) DEFAULT 0.00,
             payment_method VARCHAR(50),
             payment_id VARCHAR(255),
+            payment_details JSON,
             payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
             student_info JSON,
             enrollment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -134,8 +135,8 @@ function handleCourseEnrollment($auth_user, $enrollment_data) {
         
         // Insert enrollment record
         $query = "INSERT INTO course_enrollments 
-                  (user_id, course_id, course_title, amount_paid, payment_method, payment_id, student_info, payment_status) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                  (user_id, course_id, course_title, amount_paid, payment_method, payment_id, payment_details, student_info, payment_status) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $payment_status = $enrollment_data['amount_paid'] == 0 ? 'completed' : 'pending';
         
@@ -147,6 +148,7 @@ function handleCourseEnrollment($auth_user, $enrollment_data) {
             $enrollment_data['amount_paid'],
             $enrollment_data['payment_method'] ?? 'free',
             $enrollment_data['payment_id'] ?? null,
+            json_encode($enrollment_data['payment_details'] ?? null),
             json_encode($enrollment_data['student_info']),
             $payment_status
         ]);
