@@ -66,6 +66,11 @@ function requireAdmin() {
 $method = $_SERVER['REQUEST_METHOD'];
 $request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
 
+// Debug: log the request path
+error_log('Request method: ' . $method);
+error_log('Request path: ' . ($_SERVER['PATH_INFO'] ?? 'empty'));
+error_log('Request array: ' . print_r($request, true));
+
 switch($method) {
     case 'GET':
         if (isset($request[0]) && $request[0] === 'admin') {
@@ -85,8 +90,11 @@ switch($method) {
         }
         break;
     case 'DELETE':
-        if (isset($request[0])) {
+        if (isset($request[0]) && !empty($request[0])) {
             deleteBranch($request[0]);
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Branch ID required for deletion']);
         }
         break;
     default:
