@@ -26,13 +26,15 @@ try {
 }
 
 function requireAdmin() {
-    $headers = getallheaders();
+    $headers = apache_request_headers() ?: [];
     $token = null;
 
-    if (isset($headers['Authorization'])) {
-        $auth_header = $headers['Authorization'];
-        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
-            $token = $matches[1];
+    foreach ($headers as $key => $value) {
+        if (strtolower($key) === 'authorization') {
+            if (preg_match('/Bearer\s(\S+)/', $value, $matches)) {
+                $token = $matches[1];
+            }
+            break;
         }
     }
 
@@ -115,7 +117,20 @@ switch($method) {
 function getAllCourses() {
     global $db;
     
-    requireAdmin();
+    // Check if this is a public request (no auth required for GET)
+    $headers = apache_request_headers() ?: [];
+    $hasAuthHeader = false;
+    
+    foreach ($headers as $key => $value) {
+        if (strtolower($key) === 'authorization') {
+            $hasAuthHeader = true;
+            break;
+        }
+    }
+    
+    if ($hasAuthHeader) {
+        requireAdmin();
+    }
     
     try {
         // Check if courses table exists
@@ -130,21 +145,28 @@ function getAllCourses() {
                 lessons INT DEFAULT 0,
                 level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
                 status ENUM('active', 'inactive') DEFAULT 'active',
+                image_path VARCHAR(500),
+                video_path VARCHAR(500),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )";
             $db->exec($createTable);
         }
         
-        $query = "SELECT * FROM courses ORDER BY created_at DESC";
+        // For public requests, only return active courses
+        if (!$hasAuthHeader) {
+            $query = "SELECT * FROM courses WHERE status = 'active' ORDER BY created_at DESC";
+        } else {
+            $query = "SELECT * FROM courses ORDER BY created_at DESC";
+        }
+        
         $stmt = $db->prepare($query);
         $stmt->execute();
         $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         echo json_encode([
             'success' => true,
-            'courses' => $courses,
-            'table_created' => $checkTable->rowCount() === 0
+            'courses' => $courses
         ]);
     } catch (PDOException $e) {
         error_log('Database error in getAllCourses: ' . $e->getMessage());
