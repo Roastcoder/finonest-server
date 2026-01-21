@@ -133,7 +133,7 @@ if (preg_match('/\/api\/settings\/(.+)/', $path, $matches)) {
 function getSetting($key) {
     global $db;
     
-    // Public access for certain settings
+    // Public access for certain settings (no auth required)
     $publicSettings = ['razorpay_key', 'site_name'];
     
     if (!in_array($key, $publicSettings)) {
@@ -152,8 +152,16 @@ function getSetting($key) {
                 'key' => $result['setting_value']
             ]);
         } else {
-            http_response_code(404);
-            echo json_encode(['error' => 'Setting not found']);
+            // Return default for razorpay_key if not found
+            if ($key === 'razorpay_key') {
+                echo json_encode([
+                    'success' => true,
+                    'key' => 'rzp_test_default'
+                ]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Setting not found']);
+            }
         }
     } catch (Exception $e) {
         error_log('Error in getSetting: ' . $e->getMessage());
