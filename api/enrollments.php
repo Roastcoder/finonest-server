@@ -121,8 +121,10 @@ function getAllEnrollments() {
             if ($enrollment['student_info']) {
                 $enrollment['student_info'] = json_decode($enrollment['student_info'], true);
             }
-            if ($enrollment['payment_details']) {
+            if (isset($enrollment['payment_details']) && $enrollment['payment_details']) {
                 $enrollment['payment_details'] = json_decode($enrollment['payment_details'], true);
+            } else {
+                $enrollment['payment_details'] = null;
             }
         }
         
