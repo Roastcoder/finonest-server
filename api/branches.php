@@ -132,7 +132,18 @@ function getAllBranches() {
             return;
         }
         
-        $query = "SELECT * FROM branches WHERE status = 'active' ORDER BY priority DESC, city, name";
+        // Check if priority column exists, if not add it
+        try {
+            $checkColumn = $db->query("SHOW COLUMNS FROM branches LIKE 'priority'");
+            if ($checkColumn->rowCount() === 0) {
+                $db->exec("ALTER TABLE branches ADD COLUMN priority INT DEFAULT 0");
+            }
+        } catch (PDOException $e) {
+            error_log('Priority column check/add error: ' . $e->getMessage());
+        }
+        
+        // Use COALESCE to handle missing priority column gracefully
+        $query = "SELECT *, COALESCE(priority, 0) as priority FROM branches WHERE status = 'active' ORDER BY COALESCE(priority, 0) DESC, city, name";
         $stmt = $db->prepare($query);
         $stmt->execute();
         $branches = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -143,8 +154,31 @@ function getAllBranches() {
         ]);
     } catch (PDOException $e) {
         error_log('Database error in getAllBranches: ' . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch branches: ' . $e->getMessage()]);
+        
+        // Try without priority column if it doesn't exist
+        try {
+            $query = "SELECT * FROM branches WHERE status = 'active' ORDER BY city, name";
+            $stmt = $db->prepare($query);
+            $stmt->execute();
+            $branches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Add default priority to each branch
+            foreach ($branches as &$branch) {
+                if (!isset($branch['priority'])) {
+                    $branch['priority'] = 0;
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'branches' => $branches
+            ]);
+            return;
+        } catch (PDOException $e2) {
+            error_log('Fallback query also failed: ' . $e2->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to fetch branches: ' . $e2->getMessage()]);
+        }
     } catch (Exception $e) {
         error_log('General error in getAllBranches: ' . $e->getMessage());
         http_response_code(500);
@@ -163,7 +197,17 @@ function getAllBranchesAdmin() {
     header('Expires: 0');
     
     try {
-        $query = "SELECT * FROM branches ORDER BY created_at DESC";
+        // Ensure priority column exists for admin queries too
+        try {
+            $checkColumn = $db->query("SHOW COLUMNS FROM branches LIKE 'priority'");
+            if ($checkColumn->rowCount() === 0) {
+                $db->exec("ALTER TABLE branches ADD COLUMN priority INT DEFAULT 0");
+            }
+        } catch (PDOException $e) {
+            error_log('Priority column check/add error in admin: ' . $e->getMessage());
+        }
+        
+        $query = "SELECT *, COALESCE(priority, 0) as priority FROM branches ORDER BY created_at DESC";
         $stmt = $db->prepare($query);
         $stmt->execute();
         $branches = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -173,8 +217,31 @@ function getAllBranchesAdmin() {
             'branches' => $branches
         ]);
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch branches']);
+        error_log('Error in getAllBranchesAdmin: ' . $e->getMessage());
+        
+        // Fallback without priority
+        try {
+            $query = "SELECT * FROM branches ORDER BY created_at DESC";
+            $stmt = $db->prepare($query);
+            $stmt->execute();
+            $branches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Add default priority
+            foreach ($branches as &$branch) {
+                if (!isset($branch['priority'])) {
+                    $branch['priority'] = 0;
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'branches' => $branches
+            ]);
+            return;
+        } catch (Exception $e2) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to fetch branches']);
+        }
     }
 }
 
