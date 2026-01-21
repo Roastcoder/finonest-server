@@ -11,6 +11,8 @@ RewriteRule ^api/contact/?$ api/contact.php [QSA,L]
 RewriteRule ^api/validate/?$ api/validate.php [QSA,L]
 RewriteRule ^api/blogs/?(.*)$ api/blogs.php [QSA,L]
 RewriteRule ^api/courses/?(.*)$ api/courses.php [QSA,L]
+RewriteRule ^api/enrollments/?(.*)$ api/enrollments.php [QSA,L]
+RewriteRule ^api/settings/?(.*)$ api/settings.php [QSA,L]
 RewriteRule ^api/upload-image/?$ api/upload-image.php [QSA,L]
 
 # Serve uploaded images

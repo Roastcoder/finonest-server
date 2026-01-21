@@ -93,6 +93,17 @@ function getAllEnrollments() {
     requireAdmin();
     
     try {
+        // First check if table exists
+        $tableCheck = $db->query("SHOW TABLES LIKE 'course_enrollments'");
+        if ($tableCheck->rowCount() === 0) {
+            echo json_encode([
+                'success' => true,
+                'enrollments' => [],
+                'message' => 'No enrollments table found - will be created when first enrollment is made'
+            ]);
+            return;
+        }
+        
         $query = "SELECT 
                     ce.*,
                     u.name as user_name,
