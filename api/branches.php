@@ -98,6 +98,11 @@ switch($method) {
 function getAllBranches() {
     global $db;
     
+    // Add cache-busting headers
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
     try {
         // Check if branches table exists
         $checkTable = $db->query("SHOW TABLES LIKE 'branches'");
@@ -131,6 +136,11 @@ function getAllBranchesAdmin() {
     global $db;
     
     requireAdmin();
+    
+    // Add cache-busting headers
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     
     try {
         $query = "SELECT * FROM branches ORDER BY created_at DESC";
@@ -180,18 +190,6 @@ function createBranch() {
     // Validate latitude and longitude ranges
     $latitude = floatval($data['latitude']);
     $longitude = floatval($data['longitude']);
-    
-    if ($latitude < -90 || $latitude > 90) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Latitude must be between -90 and 90 degrees']);
-        return;
-    }
-    
-    if ($longitude < -180 || $longitude > 180) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Longitude must be between -180 and 180 degrees']);
-        return;
-    }
     
     try {
         // Add position columns if they don't exist
@@ -256,20 +254,10 @@ function updateBranch($id) {
     // Validate latitude and longitude if provided
     if (isset($data['latitude'])) {
         $latitude = floatval($data['latitude']);
-        if ($latitude < -90 || $latitude > 90) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Latitude must be between -90 and 90 degrees']);
-            return;
-        }
     }
     
     if (isset($data['longitude'])) {
         $longitude = floatval($data['longitude']);
-        if ($longitude < -180 || $longitude > 180) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Longitude must be between -180 and 180 degrees']);
-            return;
-        }
     }
     
     try {
@@ -323,20 +311,34 @@ function deleteBranch($id) {
     requireAdmin();
     
     try {
+        // First check if branch exists
+        $checkQuery = "SELECT name FROM branches WHERE id = ?";
+        $checkStmt = $db->prepare($checkQuery);
+        $checkStmt->execute([$id]);
+        $branch = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$branch) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Branch not found']);
+            return;
+        }
+        
         $query = "DELETE FROM branches WHERE id = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([$id]);
         
-        if ($stmt->rowCount() > 0) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Branch deleted successfully'
-            ]);
-        } else {
-            http_response_code(404);
-            echo json_encode(['error' => 'Branch not found']);
-        }
+        // Add cache-busting headers
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Branch deleted successfully',
+            'deleted_branch' => $branch['name']
+        ]);
     } catch (Exception $e) {
+        error_log('Delete branch error: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to delete branch']);
     }
