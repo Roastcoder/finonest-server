@@ -281,6 +281,15 @@ function updateBranch($id) {
     }
     
     try {
+        // Add position columns if they don't exist
+        try {
+            $db->exec("ALTER TABLE branches ADD COLUMN x_position DECIMAL(5,2) NULL");
+        } catch (PDOException $e) {}
+        
+        try {
+            $db->exec("ALTER TABLE branches ADD COLUMN y_position DECIMAL(5,2) NULL");
+        } catch (PDOException $e) {}
+        
         $query = "UPDATE branches SET name = ?, address = ?, city = ?, state = ?, pincode = ?, 
                   phone = ?, email = ?, latitude = ?, longitude = ?, x_position = ?, y_position = ?, manager_name = ?, 
                   working_hours = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
