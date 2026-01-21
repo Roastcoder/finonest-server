@@ -47,14 +47,20 @@ function requireAdmin() {
         exit();
     }
 
-    $decoded = JWT::decode($token);
-    if (!$decoded || $decoded['role'] !== 'ADMIN') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Admin access required']);
+    try {
+        $decoded = JWT::decode($token);
+        if (!$decoded || $decoded['role'] !== 'ADMIN') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Admin access required']);
+            exit();
+        }
+        return $decoded;
+    } catch (Exception $e) {
+        error_log('JWT decode error: ' . $e->getMessage());
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
         exit();
     }
-
-    return $decoded;
 }
 
 $database = new Database();
@@ -148,9 +154,22 @@ function getAllBranchesAdmin() {
 function createBranch() {
     global $db;
     
-    requireAdmin();
+    try {
+        requireAdmin();
+    } catch (Exception $e) {
+        error_log('Admin auth error in createBranch: ' . $e->getMessage());
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication failed']);
+        return;
+    }
     
     $data = json_decode(file_get_contents("php://input"), true);
+    
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON data']);
+        return;
+    }
     
     $required_fields = ['name', 'address', 'city', 'state', 'pincode', 'latitude', 'longitude'];
     foreach ($required_fields as $field) {
@@ -186,7 +205,12 @@ function createBranch() {
             'message' => 'Branch created successfully',
             'id' => $db->lastInsertId()
         ]);
+    } catch (PDOException $e) {
+        error_log('Database error in createBranch: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     } catch (Exception $e) {
+        error_log('General error in createBranch: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to create branch']);
     }
