@@ -346,28 +346,22 @@ function updateCourse($id) {
     }
     
     try {
-        // Build query based on whether files are uploaded
-        if ($imagePath && $videoPath) {
-            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, price = ?, original_price = ?, image_path = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
-                      WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $imagePath, $videoPath, $id];
-        } elseif ($imagePath) {
-            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, price = ?, original_price = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP 
-                      WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $imagePath, $id];
-        } elseif ($videoPath) {
-            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, price = ?, original_price = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
-                      WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $videoPath, $id];
-        } else {
-            $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, price = ?, original_price = ?, updated_at = CURRENT_TIMESTAMP 
-                      WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $id];
+        // Build dynamic query based on uploaded files
+        $updateFields = "title = ?, description = ?, duration = ?, lessons = ?, level = ?, status = ?, price = ?, original_price = ?";
+        $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price];
+        
+        if ($imagePath) {
+            $updateFields .= ", image_path = ?";
+            $params[] = $imagePath;
         }
+        
+        if ($videoPath) {
+            $updateFields .= ", video_path = ?";
+            $params[] = $videoPath;
+        }
+        
+        $query = "UPDATE courses SET {$updateFields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        $params[] = $id;
         
         $stmt = $db->prepare($query);
         $stmt->execute($params);
