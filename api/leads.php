@@ -9,6 +9,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/jwt.php';
+
+function requireAdmin() {
+    $headers = apache_request_headers() ?: [];
+    $token = null;
+
+    foreach ($headers as $key => $value) {
+        if (strtolower($key) === 'authorization') {
+            if (preg_match('/Bearer\s(\S+)/', $value, $matches)) {
+                $token = $matches[1];
+            }
+            break;
+        }
+    }
+
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['error' => 'No token provided']);
+        exit();
+    }
+
+    try {
+        $decoded = JWT::decode($token);
+        if (!$decoded || $decoded['role'] !== 'ADMIN') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Admin access required']);
+            exit();
+        }
+        return $decoded;
+    } catch (Exception $e) {
+        error_log('JWT decode error: ' . $e->getMessage());
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
+        exit();
+    }
+}
 
 function validateApiKey() {
     $headers = getallheaders();
@@ -213,21 +249,7 @@ function submitLead() {
 function getLeads() {
     global $db;
     
-    // Allow admin access without API key for GET requests
-    $headers = getallheaders();
-    $apiKey = $headers['X-API-Key'] ?? null;
-    
-    // Only validate API key if it's provided, otherwise allow admin access
-    if ($apiKey && $apiKey !== 'lms_8188272ffd90118df860b5e768fe6681') {
-        http_response_code(401);
-        echo json_encode([
-            'status' => 401,
-            'message' => 'Invalid API key',
-            'data' => null,
-            'timestamp' => date('Y-m-d H:i:s')
-        ]);
-        return;
-    }
+    requireAdmin();
     
     try {
         // Create leads table if not exists
@@ -261,10 +283,8 @@ function getLeads() {
         $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         echo json_encode([
-            'status' => 200,
-            'message' => 'Leads retrieved successfully',
-            'data' => $leads,
-            'timestamp' => date('Y-m-d H:i:s')
+            'success' => true,
+            'leads' => $leads
         ]);
     } catch (Exception $e) {
         http_response_code(500);
