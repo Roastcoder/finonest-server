@@ -310,28 +310,36 @@ function deleteBranch($id) {
     
     requireAdmin();
     
+    // Debug: log the ID being deleted
+    error_log("Attempting to delete branch with ID: " . $id);
+    
     try {
         // Force delete without checking if exists first
         $query = "DELETE FROM branches WHERE id = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([$id]);
         
+        $rowCount = $stmt->rowCount();
+        error_log("Delete query affected $rowCount rows");
+        
         // Add cache-busting headers
         header('Cache-Control: no-cache, no-store, must-revalidate');
         header('Pragma: no-cache');
         header('Expires: 0');
         
-        if ($stmt->rowCount() > 0) {
+        if ($rowCount > 0) {
             echo json_encode([
                 'success' => true,
                 'message' => 'Branch deleted successfully',
-                'deleted_id' => $id
+                'deleted_id' => $id,
+                'rows_affected' => $rowCount
             ]);
         } else {
             echo json_encode([
                 'success' => false,
                 'message' => 'Branch not found or already deleted',
-                'id' => $id
+                'id' => $id,
+                'rows_affected' => $rowCount
             ]);
         }
     } catch (Exception $e) {
