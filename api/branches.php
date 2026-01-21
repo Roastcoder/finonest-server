@@ -311,18 +311,7 @@ function deleteBranch($id) {
     requireAdmin();
     
     try {
-        // First check if branch exists
-        $checkQuery = "SELECT name FROM branches WHERE id = ?";
-        $checkStmt = $db->prepare($checkQuery);
-        $checkStmt->execute([$id]);
-        $branch = $checkStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$branch) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Branch not found']);
-            return;
-        }
-        
+        // Force delete without checking if exists first
         $query = "DELETE FROM branches WHERE id = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([$id]);
@@ -332,15 +321,23 @@ function deleteBranch($id) {
         header('Pragma: no-cache');
         header('Expires: 0');
         
-        echo json_encode([
-            'success' => true,
-            'message' => 'Branch deleted successfully',
-            'deleted_branch' => $branch['name']
-        ]);
+        if ($stmt->rowCount() > 0) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Branch deleted successfully',
+                'deleted_id' => $id
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Branch not found or already deleted',
+                'id' => $id
+            ]);
+        }
     } catch (Exception $e) {
         error_log('Delete branch error: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to delete branch']);
+        echo json_encode(['error' => 'Failed to delete branch: ' . $e->getMessage()]);
     }
 }
 
