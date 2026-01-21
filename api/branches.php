@@ -63,9 +63,6 @@ function requireAdmin() {
     }
 }
 
-$database = new Database();
-$db = $database->getConnection();
-
 $method = $_SERVER['REQUEST_METHOD'];
 $request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
 
@@ -180,6 +177,22 @@ function createBranch() {
         }
     }
     
+    // Validate latitude and longitude ranges
+    $latitude = floatval($data['latitude']);
+    $longitude = floatval($data['longitude']);
+    
+    if ($latitude < -90 || $latitude > 90) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Latitude must be between -90 and 90 degrees']);
+        return;
+    }
+    
+    if ($longitude < -180 || $longitude > 180) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Longitude must be between -180 and 180 degrees']);
+        return;
+    }
+    
     try {
         $query = "INSERT INTO branches (name, address, city, state, pincode, phone, email, latitude, longitude, manager_name, working_hours, status) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -193,8 +206,8 @@ function createBranch() {
             $data['pincode'],
             $data['phone'] ?? null,
             $data['email'] ?? null,
-            $data['latitude'],
-            $data['longitude'],
+            $latitude,
+            $longitude,
             $data['manager_name'] ?? null,
             $data['working_hours'] ?? '9:00 AM - 6:00 PM',
             $data['status'] ?? 'active'
@@ -223,6 +236,31 @@ function updateBranch($id) {
     
     $data = json_decode(file_get_contents("php://input"), true);
     
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON data']);
+        return;
+    }
+    
+    // Validate latitude and longitude if provided
+    if (isset($data['latitude'])) {
+        $latitude = floatval($data['latitude']);
+        if ($latitude < -90 || $latitude > 90) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Latitude must be between -90 and 90 degrees']);
+            return;
+        }
+    }
+    
+    if (isset($data['longitude'])) {
+        $longitude = floatval($data['longitude']);
+        if ($longitude < -180 || $longitude > 180) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Longitude must be between -180 and 180 degrees']);
+            return;
+        }
+    }
+    
     try {
         $query = "UPDATE branches SET name = ?, address = ?, city = ?, state = ?, pincode = ?, 
                   phone = ?, email = ?, latitude = ?, longitude = ?, manager_name = ?, 
@@ -238,8 +276,8 @@ function updateBranch($id) {
             $data['pincode'],
             $data['phone'] ?? null,
             $data['email'] ?? null,
-            $data['latitude'],
-            $data['longitude'],
+            isset($latitude) ? $latitude : $data['latitude'],
+            isset($longitude) ? $longitude : $data['longitude'],
             $data['manager_name'] ?? null,
             $data['working_hours'] ?? '9:00 AM - 6:00 PM',
             $data['status'] ?? 'active',
@@ -255,7 +293,12 @@ function updateBranch($id) {
             http_response_code(404);
             echo json_encode(['error' => 'Branch not found']);
         }
+    } catch (PDOException $e) {
+        error_log('Database error in updateBranch: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     } catch (Exception $e) {
+        error_log('General error in updateBranch: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to update branch']);
     }
@@ -293,6 +336,12 @@ function updateBranchPosition($id) {
     
     $data = json_decode(file_get_contents("php://input"), true);
     
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON data']);
+        return;
+    }
+    
     try {
         $query = "UPDATE branches SET x_position = ?, y_position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         $stmt = $db->prepare($query);
@@ -311,7 +360,12 @@ function updateBranchPosition($id) {
             http_response_code(404);
             echo json_encode(['error' => 'Branch not found']);
         }
+    } catch (PDOException $e) {
+        error_log('Database error in updateBranchPosition: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     } catch (Exception $e) {
+        error_log('General error in updateBranchPosition: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to update branch position']);
     }
