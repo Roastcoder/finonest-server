@@ -1,185 +1,253 @@
 <?php
-require_once '../config/database.php';
-require_once '../middleware/auth.php';
-require_once '../middleware/cors.php';
-
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$pathParts = explode('/', trim($path, '/'));
-
-// Handle CORS preflight
-if ($method === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    exit(0);
 }
+
+require_once __DIR__ . '/../config/jwt.php';
+require_once __DIR__ . '/../config/database.php';
 
 try {
     $database = new Database();
-    $pdo = $database->getConnection();
+    $db = $database->getConnection();
     
-    if (!$pdo) {
+    if (!$db) {
         throw new Exception('Database connection failed');
     }
+} catch (Exception $e) {
+    error_log('Database connection error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed']);
+    exit();
+}
+
+function requireAdmin() {
+    $headers = getallheaders();
+    $token = null;
+
+    if (isset($headers['Authorization'])) {
+        $auth_header = $headers['Authorization'];
+        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+            $token = $matches[1];
+        }
+    }
+
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['error' => 'No token provided']);
+        exit();
+    }
+
+    try {
+        $decoded = JWT::decode($token);
+        if (!$decoded || $decoded['role'] !== 'ADMIN') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Admin access required']);
+            exit();
+        }
+        return $decoded;
+    } catch (Exception $e) {
+        error_log('JWT decode error: ' . $e->getMessage());
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
+        exit();
+    }
+}
+
+$method = $_SERVER['REQUEST_METHOD'];
+$request_uri = $_SERVER['REQUEST_URI'];
+$path = parse_url($request_uri, PHP_URL_PATH);
+
+// Extract ID from URL
+if (preg_match('/\/api\/courses\/(\d+)/', $path, $matches)) {
+    $course_id = $matches[1];
+} else {
+    $course_id = null;
+}
+
+// Create courses table if it doesn't exist
+try {
+    $createTable = "CREATE TABLE IF NOT EXISTS courses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        duration VARCHAR(100),
+        lessons INT DEFAULT 0,
+        level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )";
+    $db->exec($createTable);
+} catch (PDOException $e) {
+    error_log('Table creation error: ' . $e->getMessage());
+}
+
+switch($method) {
+    case 'GET':
+        getAllCourses();
+        break;
+    case 'POST':
+        createCourse();
+        break;
+    case 'PUT':
+        if ($course_id) {
+            updateCourse($course_id);
+        }
+        break;
+    case 'DELETE':
+        if ($course_id) {
+            deleteCourse($course_id);
+        }
+        break;
+    default:
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+        break;
+}
+
+function getAllCourses() {
+    global $db;
     
-    // Create courses table if it doesn't exist
-    $createTable = "
-        CREATE TABLE IF NOT EXISTS courses (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            description TEXT NOT NULL,
-            duration VARCHAR(50) NOT NULL,
-            lessons INT NOT NULL,
-            level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
-            status ENUM('active', 'inactive') DEFAULT 'active',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )
-    ";
-    $pdo->exec($createTable);
+    requireAdmin();
+    
+    try {
+        $query = "SELECT * FROM courses ORDER BY created_at DESC";
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+        $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'success' => true,
+            'courses' => $courses
+        ]);
+    } catch (Exception $e) {
+        error_log('Error in getAllCourses: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to fetch courses']);
+    }
+}
 
-    switch ($method) {
-        case 'GET':
-            if (isset($pathParts[3]) && $pathParts[3] === 'admin') {
-                // Admin route - requires authentication
-                $user = authenticateUser($pdo);
-                if (!$user || $user['role'] !== 'ADMIN') {
-                    http_response_code(403);
-                    echo json_encode(['error' => 'Admin access required']);
-                    exit();
-                }
-                
-                // Get all courses for admin
-                $stmt = $pdo->prepare("SELECT * FROM courses ORDER BY created_at DESC");
-                $stmt->execute();
-                $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                echo json_encode(['courses' => $courses]);
-            } else {
-                // Public route - only active courses
-                $stmt = $pdo->prepare("SELECT * FROM courses WHERE status = 'active' ORDER BY created_at DESC");
-                $stmt->execute();
-                $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                echo json_encode(['courses' => $courses]);
-            }
-            break;
+function createCourse() {
+    global $db;
+    
+    requireAdmin();
+    
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON data']);
+        return;
+    }
+    
+    $required_fields = ['title', 'description'];
+    foreach ($required_fields as $field) {
+        if (!isset($data[$field]) || empty($data[$field])) {
+            http_response_code(400);
+            echo json_encode(['error' => "Field '$field' is required"]);
+            return;
+        }
+    }
+    
+    try {
+        $query = "INSERT INTO courses (title, description, duration, lessons, level, status) 
+                  VALUES (?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([
+            $data['title'],
+            $data['description'],
+            $data['duration'] ?? '',
+            $data['lessons'] ?? 0,
+            $data['level'] ?? 'Beginner',
+            $data['status'] ?? 'active'
+        ]);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Course created successfully',
+            'id' => $db->lastInsertId()
+        ]);
+    } catch (Exception $e) {
+        error_log('Error in createCourse: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to create course']);
+    }
+}
 
-        case 'POST':
-            // Admin only - create new course
-            $user = authenticateUser($pdo);
-            if (!$user || $user['role'] !== 'ADMIN') {
-                http_response_code(403);
-                echo json_encode(['error' => 'Admin access required']);
-                exit();
-            }
-
-            $input = json_decode(file_get_contents('php://input'), true);
-            
-            if (!$input['title'] || !$input['description'] || !$input['duration'] || !$input['lessons']) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Missing required fields']);
-                exit();
-            }
-
-            $stmt = $pdo->prepare("
-                INSERT INTO courses (title, description, duration, lessons, level, status) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            ");
-            
-            $stmt->execute([
-                $input['title'],
-                $input['description'],
-                $input['duration'],
-                $input['lessons'],
-                $input['level'] ?? 'Beginner',
-                $input['status'] ?? 'active'
-            ]);
-
-            $courseId = $pdo->lastInsertId();
-            
-            echo json_encode([
-                'success' => true,
-                'message' => 'Course created successfully',
-                'course_id' => $courseId
-            ]);
-            break;
-
-        case 'PUT':
-            // Admin only - update course
-            $user = authenticateUser($pdo);
-            if (!$user || $user['role'] !== 'ADMIN') {
-                http_response_code(403);
-                echo json_encode(['error' => 'Admin access required']);
-                exit();
-            }
-
-            if (!isset($pathParts[4])) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Course ID required']);
-                exit();
-            }
-
-            $courseId = $pathParts[4];
-            $input = json_decode(file_get_contents('php://input'), true);
-
-            $stmt = $pdo->prepare("
-                UPDATE courses 
-                SET title = ?, description = ?, duration = ?, lessons = ?, level = ?, status = ?
-                WHERE id = ?
-            ");
-            
-            $stmt->execute([
-                $input['title'],
-                $input['description'],
-                $input['duration'],
-                $input['lessons'],
-                $input['level'] ?? 'Beginner',
-                $input['status'] ?? 'active',
-                $courseId
-            ]);
-
+function updateCourse($id) {
+    global $db;
+    
+    requireAdmin();
+    
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    if (!$data) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON data']);
+        return;
+    }
+    
+    try {
+        $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
+                  level = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
+                  WHERE id = ?";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([
+            $data['title'],
+            $data['description'],
+            $data['duration'] ?? '',
+            $data['lessons'] ?? 0,
+            $data['level'] ?? 'Beginner',
+            $data['status'] ?? 'active',
+            $id
+        ]);
+        
+        if ($stmt->rowCount() > 0) {
             echo json_encode([
                 'success' => true,
                 'message' => 'Course updated successfully'
             ]);
-            break;
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Course not found']);
+        }
+    } catch (Exception $e) {
+        error_log('Error in updateCourse: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update course']);
+    }
+}
 
-        case 'DELETE':
-            // Admin only - delete course
-            $user = authenticateUser($pdo);
-            if (!$user || $user['role'] !== 'ADMIN') {
-                http_response_code(403);
-                echo json_encode(['error' => 'Admin access required']);
-                exit();
-            }
-
-            if (!isset($pathParts[4])) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Course ID required']);
-                exit();
-            }
-
-            $courseId = $pathParts[4];
-            
-            $stmt = $pdo->prepare("DELETE FROM courses WHERE id = ?");
-            $stmt->execute([$courseId]);
-
+function deleteCourse($id) {
+    global $db;
+    
+    requireAdmin();
+    
+    try {
+        $query = "DELETE FROM courses WHERE id = ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$id]);
+        
+        if ($stmt->rowCount() > 0) {
             echo json_encode([
                 'success' => true,
                 'message' => 'Course deleted successfully'
             ]);
-            break;
-
-        default:
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-            break;
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Course not found']);
+        }
+    } catch (Exception $e) {
+        error_log('Error in deleteCourse: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to delete course']);
     }
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
 }
 ?>
