@@ -16,7 +16,12 @@ if ($method === 'OPTIONS') {
 }
 
 try {
-    $pdo = getDBConnection();
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
+        throw new Exception('Database connection failed');
+    }
     
     // Create courses table if it doesn't exist
     $createTable = "

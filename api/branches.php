@@ -343,6 +343,31 @@ function updateBranchPosition($id) {
     }
     
     try {
+        // First check if the branch exists
+        $checkQuery = "SELECT id FROM branches WHERE id = ?";
+        $checkStmt = $db->prepare($checkQuery);
+        $checkStmt->execute([$id]);
+        
+        if ($checkStmt->rowCount() === 0) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Branch not found']);
+            return;
+        }
+        
+        // Try to add columns if they don't exist (MySQL will ignore if they exist)
+        try {
+            $db->exec("ALTER TABLE branches ADD COLUMN x_position DECIMAL(5,2) NULL");
+        } catch (PDOException $e) {
+            // Column already exists, ignore
+        }
+        
+        try {
+            $db->exec("ALTER TABLE branches ADD COLUMN y_position DECIMAL(5,2) NULL");
+        } catch (PDOException $e) {
+            // Column already exists, ignore
+        }
+        
+        // Now update the position
         $query = "UPDATE branches SET x_position = ?, y_position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([
@@ -358,7 +383,7 @@ function updateBranchPosition($id) {
             ]);
         } else {
             http_response_code(404);
-            echo json_encode(['error' => 'Branch not found']);
+            echo json_encode(['error' => 'Branch not found or no changes made']);
         }
     } catch (PDOException $e) {
         error_log('Database error in updateBranchPosition: ' . $e->getMessage());
