@@ -70,12 +70,19 @@ switch($method) {
 }
 
 function submitForm() {
-    global $application;
+    global $application, $db;
     
     $auth_user = authenticate();
     $data = json_decode(file_get_contents("php://input"), true);
     
-    // Handle both direct fields and nested form_data
+    $form_type = $data['form_type'] ?? 'loan_application';
+    
+    if ($form_type === 'course_enrollment') {
+        handleCourseEnrollment($auth_user, $data['form_data']);
+        return;
+    }
+    
+    // Handle regular loan applications
     $form_fields = isset($data['form_data']) ? $data['form_data'] : $data;
     
     // Create form_data object from the submitted data
@@ -101,6 +108,60 @@ function submitForm() {
     } else {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to submit application']);
+    }
+}
+
+function handleCourseEnrollment($auth_user, $enrollment_data) {
+    global $db;
+    
+    try {
+        // Create course_enrollments table if it doesn't exist
+        $createTable = "CREATE TABLE IF NOT EXISTS course_enrollments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            course_id INT NOT NULL,
+            course_title VARCHAR(255) NOT NULL,
+            amount_paid DECIMAL(10,2) DEFAULT 0.00,
+            payment_method VARCHAR(50),
+            payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+            student_info JSON,
+            enrollment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )";
+        $db->exec($createTable);
+        
+        // Insert enrollment record
+        $query = "INSERT INTO course_enrollments 
+                  (user_id, course_id, course_title, amount_paid, payment_method, student_info, payment_status) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        $payment_status = $enrollment_data['amount_paid'] == 0 ? 'completed' : 'pending';
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([
+            $auth_user['user_id'],
+            $enrollment_data['course_id'],
+            $enrollment_data['course_title'],
+            $enrollment_data['amount_paid'],
+            $enrollment_data['payment_method'] ?? 'free',
+            json_encode($enrollment_data['student_info']),
+            $payment_status
+        ]);
+        
+        $enrollment_id = $db->lastInsertId();
+        
+        echo json_encode([
+            'success' => true,
+            'enrollment_id' => $enrollment_id,
+            'message' => 'Course enrollment successful',
+            'payment_status' => $payment_status
+        ]);
+        
+    } catch (Exception $e) {
+        error_log('Course enrollment error: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to enroll in course']);
     }
 }
 

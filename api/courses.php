@@ -87,12 +87,26 @@ try {
         lessons INT DEFAULT 0,
         level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
         status ENUM('active', 'inactive') DEFAULT 'active',
+        price DECIMAL(10,2) DEFAULT 0.00,
+        original_price DECIMAL(10,2) DEFAULT NULL,
         image_path VARCHAR(500),
         video_path VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )";
     $db->exec($createTable);
+    
+    // Add price columns if they don't exist (for existing tables)
+    try {
+        $db->exec("ALTER TABLE courses ADD COLUMN price DECIMAL(10,2) DEFAULT 0.00");
+    } catch (PDOException $e) {
+        // Column already exists
+    }
+    try {
+        $db->exec("ALTER TABLE courses ADD COLUMN original_price DECIMAL(10,2) DEFAULT NULL");
+    } catch (PDOException $e) {
+        // Column already exists
+    }
 } catch (PDOException $e) {
     error_log('Table creation error: ' . $e->getMessage());
 }
@@ -151,6 +165,8 @@ function getAllCourses() {
                 lessons INT DEFAULT 0,
                 level ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
                 status ENUM('active', 'inactive') DEFAULT 'active',
+                price DECIMAL(10,2) DEFAULT 0.00,
+                original_price DECIMAL(10,2) DEFAULT NULL,
                 image_path VARCHAR(500),
                 video_path VARCHAR(500),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -209,6 +225,8 @@ function createCourse() {
     $lessons = intval($_POST['lessons'] ?? 0);
     $level = $_POST['level'] ?? 'Beginner';
     $status = $_POST['status'] ?? 'active';
+    $price = floatval($_POST['price'] ?? 0);
+    $original_price = !empty($_POST['original_price']) ? floatval($_POST['original_price']) : null;
     
     if (empty($title) || empty($description)) {
         http_response_code(400);
@@ -217,8 +235,8 @@ function createCourse() {
     }
     
     try {
-        $query = "INSERT INTO courses (title, description, duration, lessons, level, status, image_path, video_path) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO courses (title, description, duration, lessons, level, status, price, original_price, image_path, video_path) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $db->prepare($query);
         $stmt->execute([
@@ -228,6 +246,8 @@ function createCourse() {
             $lessons,
             $level,
             $status,
+            $price,
+            $original_price,
             $imagePath,
             $videoPath
         ]);
@@ -302,6 +322,8 @@ function updateCourse($id) {
         $lessons = intval($_POST['lessons'] ?? 0);
         $level = $_POST['level'] ?? 'Beginner';
         $status = $_POST['status'] ?? 'active';
+        $price = floatval($_POST['price'] ?? 0);
+        $original_price = !empty($_POST['original_price']) ? floatval($_POST['original_price']) : null;
     } else {
         // Handle JSON data
         $input = json_decode(file_get_contents('php://input'), true);
@@ -311,6 +333,8 @@ function updateCourse($id) {
         $lessons = intval($input['lessons'] ?? 0);
         $level = $input['level'] ?? 'Beginner';
         $status = $input['status'] ?? 'active';
+        $price = floatval($input['price'] ?? 0);
+        $original_price = !empty($input['original_price']) ? floatval($input['original_price']) : null;
         $imagePath = null;
         $videoPath = null;
     }
@@ -325,24 +349,24 @@ function updateCourse($id) {
         // Build query based on whether files are uploaded
         if ($imagePath && $videoPath) {
             $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, image_path = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
+                      level = ?, status = ?, price = ?, original_price = ?, image_path = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
                       WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $imagePath, $videoPath, $id];
+            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $imagePath, $videoPath, $id];
         } elseif ($imagePath) {
             $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP 
+                      level = ?, status = ?, price = ?, original_price = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP 
                       WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $imagePath, $id];
+            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $imagePath, $id];
         } elseif ($videoPath) {
             $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
+                      level = ?, status = ?, price = ?, original_price = ?, video_path = ?, updated_at = CURRENT_TIMESTAMP 
                       WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $videoPath, $id];
+            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $videoPath, $id];
         } else {
             $query = "UPDATE courses SET title = ?, description = ?, duration = ?, lessons = ?, 
-                      level = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
+                      level = ?, status = ?, price = ?, original_price = ?, updated_at = CURRENT_TIMESTAMP 
                       WHERE id = ?";
-            $params = [$title, $description, $duration, $lessons, $level, $status, $id];
+            $params = [$title, $description, $duration, $lessons, $level, $status, $price, $original_price, $id];
         }
         
         $stmt = $db->prepare($query);
