@@ -61,6 +61,12 @@ function requireAdmin() {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Handle method override for FormData uploads
+if ($method === 'POST' && isset($_POST['_method'])) {
+    $method = strtoupper($_POST['_method']);
+}
+
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
