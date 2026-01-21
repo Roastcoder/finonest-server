@@ -194,8 +194,17 @@ function createBranch() {
     }
     
     try {
-        $query = "INSERT INTO branches (name, address, city, state, pincode, phone, email, latitude, longitude, manager_name, working_hours, status) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Add position columns if they don't exist
+        try {
+            $db->exec("ALTER TABLE branches ADD COLUMN x_position DECIMAL(5,2) NULL");
+        } catch (PDOException $e) {}
+        
+        try {
+            $db->exec("ALTER TABLE branches ADD COLUMN y_position DECIMAL(5,2) NULL");
+        } catch (PDOException $e) {}
+        
+        $query = "INSERT INTO branches (name, address, city, state, pincode, phone, email, latitude, longitude, x_position, y_position, manager_name, working_hours, status) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $db->prepare($query);
         $stmt->execute([
@@ -208,6 +217,8 @@ function createBranch() {
             $data['email'] ?? null,
             $latitude,
             $longitude,
+            isset($data['x_position']) && $data['x_position'] !== '' ? floatval($data['x_position']) : null,
+            isset($data['y_position']) && $data['y_position'] !== '' ? floatval($data['y_position']) : null,
             $data['manager_name'] ?? null,
             $data['working_hours'] ?? '9:00 AM - 6:00 PM',
             $data['status'] ?? 'active'
@@ -263,7 +274,7 @@ function updateBranch($id) {
     
     try {
         $query = "UPDATE branches SET name = ?, address = ?, city = ?, state = ?, pincode = ?, 
-                  phone = ?, email = ?, latitude = ?, longitude = ?, manager_name = ?, 
+                  phone = ?, email = ?, latitude = ?, longitude = ?, x_position = ?, y_position = ?, manager_name = ?, 
                   working_hours = ?, status = ?, updated_at = CURRENT_TIMESTAMP 
                   WHERE id = ?";
         
@@ -278,6 +289,8 @@ function updateBranch($id) {
             $data['email'] ?? null,
             isset($latitude) ? $latitude : $data['latitude'],
             isset($longitude) ? $longitude : $data['longitude'],
+            isset($data['x_position']) && $data['x_position'] !== '' ? floatval($data['x_position']) : null,
+            isset($data['y_position']) && $data['y_position'] !== '' ? floatval($data['y_position']) : null,
             $data['manager_name'] ?? null,
             $data['working_hours'] ?? '9:00 AM - 6:00 PM',
             $data['status'] ?? 'active',
