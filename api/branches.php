@@ -11,6 +11,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 require_once __DIR__ . '/../config/jwt.php';
 require_once __DIR__ . '/../config/database.php';
 
+// Error handling
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+    
+    if (!$db) {
+        throw new Exception('Database connection failed');
+    }
+} catch (Exception $e) {
+    error_log('Database connection error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed']);
+    exit();
+}
+
 function requireAdmin() {
     $headers = getallheaders();
     $token = null;
@@ -77,6 +96,14 @@ function getAllBranches() {
     global $db;
     
     try {
+        // Check if branches table exists
+        $checkTable = $db->query("SHOW TABLES LIKE 'branches'");
+        if ($checkTable->rowCount() === 0) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Branches table not found']);
+            return;
+        }
+        
         $query = "SELECT * FROM branches WHERE status = 'active' ORDER BY city, name";
         $stmt = $db->prepare($query);
         $stmt->execute();
@@ -86,7 +113,12 @@ function getAllBranches() {
             'success' => true,
             'branches' => $branches
         ]);
+    } catch (PDOException $e) {
+        error_log('Database error in getAllBranches: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to fetch branches: ' . $e->getMessage()]);
     } catch (Exception $e) {
+        error_log('General error in getAllBranches: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to fetch branches']);
     }

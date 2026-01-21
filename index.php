@@ -25,6 +25,18 @@ if (strpos($path, '/api/auth/') === 0) {
     include 'api/forms.php';
 } elseif (strpos($path, '/api/contact') === 0) {
     include 'api/contact.php';
+} elseif (strpos($path, '/api/branches') === 0) {
+    $_SERVER['PATH_INFO'] = substr($path, 13); // Remove '/api/branches'
+    include 'api/branches.php';
+} elseif (strpos($path, '/api/bankers') === 0) {
+    $_SERVER['PATH_INFO'] = substr($path, 12); // Remove '/api/bankers'
+    include 'api/bankers.php';
+} elseif (strpos($path, '/api/blogs') === 0) {
+    $_SERVER['PATH_INFO'] = substr($path, 10); // Remove '/api/blogs'
+    include 'api/blogs.php';
+} elseif (strpos($path, '/api/courses') === 0) {
+    $_SERVER['PATH_INFO'] = substr($path, 12); // Remove '/api/courses'
+    include 'api/courses.php';
 } elseif (strpos($path, '/api/validate') === 0) {
     include 'api/validate.php';
 } elseif ($path === '/') {
