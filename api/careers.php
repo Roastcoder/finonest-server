@@ -94,6 +94,14 @@ try {
                                      ORDER BY a.created_at DESC");
                 $stmt->execute();
                 $applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Add cv_path if missing
+                foreach ($applications as &$app) {
+                    if (!isset($app['cv_path']) && isset($app['cv_filename'])) {
+                        $app['cv_path'] = 'uploads/cvs/' . $app['cv_filename'];
+                    }
+                }
+                
                 echo json_encode(['success' => true, 'applications' => $applications]);
             }
             break;
@@ -310,6 +318,22 @@ try {
                 }
                 
                 echo json_encode(['success' => true, 'message' => 'Job updated successfully']);
+            } elseif (isset($pathParts[2]) && $pathParts[2] === 'applications' && isset($pathParts[3])) {
+                // Update application status
+                $applicationId = $pathParts[3];
+                $input = json_decode(file_get_contents('php://input'), true);
+                $status = $input['status'] ?? '';
+                
+                if (!$status) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Status is required']);
+                    exit();
+                }
+                
+                $stmt = $db->prepare("UPDATE career_applications SET status=? WHERE id=?");
+                $stmt->execute([$status, $applicationId]);
+                
+                echo json_encode(['success' => true, 'message' => 'Application status updated successfully']);
             }
             break;
 
