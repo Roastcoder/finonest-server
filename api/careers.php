@@ -33,6 +33,7 @@ try {
         salary VARCHAR(100),
         description TEXT NOT NULL,
         requirements TEXT,
+        image VARCHAR(500),
         status ENUM('active', 'inactive') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -92,29 +93,47 @@ try {
 
         case 'POST':
             if (isset($pathParts[2]) && $pathParts[2] === 'jobs') {
-                // Create job
-                $input = json_decode(file_get_contents('php://input'), true);
+                // Create job with image upload
+                $title = $_POST['title'] ?? '';
+                $department = $_POST['department'] ?? '';
+                $description = $_POST['description'] ?? '';
                 
-                if (!$input['title'] || !$input['department'] || !$input['description']) {
+                if (!$title || !$department || !$description) {
                     http_response_code(400);
                     echo json_encode(['error' => 'Missing required fields']);
                     exit();
                 }
                 
-                $stmt = $db->prepare("INSERT INTO career_jobs (title, department, location, type, salary, description, requirements) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $imagePath = null;
+                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    $uploadDir = __DIR__ . '/../uploads/job-images/';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+                    
+                    $fileName = time() . '_' . basename($_FILES['image']['name']);
+                    $targetPath = $uploadDir . $fileName;
+                    
+                    if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
+                        $imagePath = 'https://api.finonest.com/uploads/job-images/' . $fileName;
+                    }
+                }
+                
+                $stmt = $db->prepare("INSERT INTO career_jobs (title, department, location, type, salary, description, requirements, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
-                    $input['title'],
-                    $input['department'],
-                    $input['location'] ?? '',
-                    $input['type'] ?? 'Full-time',
-                    $input['salary'] ?? '',
-                    $input['description'],
-                    $input['requirements'] ?? ''
+                    $title,
+                    $department,
+                    $_POST['location'] ?? '',
+                    $_POST['type'] ?? 'Full-time',
+                    $_POST['salary'] ?? '',
+                    $description,
+                    $_POST['requirements'] ?? '',
+                    $imagePath
                 ]);
                 
                 echo json_encode(['success' => true, 'message' => 'Job created successfully', 'job_id' => $db->lastInsertId()]);
             } elseif (isset($pathParts[2]) && $pathParts[2] === 'apply') {
-                // Submit application
+                // Submit application with CV upload
                 $job_id = $_POST['job_id'] ?? '';
                 $name = $_POST['name'] ?? '';
                 $email = $_POST['email'] ?? '';
@@ -125,14 +144,33 @@ try {
                     exit();
                 }
                 
-                $stmt = $db->prepare("INSERT INTO career_applications (job_id, name, email, phone, experience, cover_letter) VALUES (?, ?, ?, ?, ?, ?)");
+                $cvFilename = null;
+                $cvPath = null;
+                if (isset($_FILES['cv_file']) && $_FILES['cv_file']['error'] === UPLOAD_ERR_OK) {
+                    $uploadDir = __DIR__ . '/../uploads/cvs/';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+                    
+                    $cvFilename = $_FILES['cv_file']['name'];
+                    $fileName = time() . '_' . basename($cvFilename);
+                    $targetPath = $uploadDir . $fileName;
+                    
+                    if (move_uploaded_file($_FILES['cv_file']['tmp_name'], $targetPath)) {
+                        $cvPath = 'uploads/cvs/' . $fileName;
+                    }
+                }
+                
+                $stmt = $db->prepare("INSERT INTO career_applications (job_id, name, email, phone, experience, cover_letter, cv_filename, cv_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $job_id,
                     $name,
                     $email,
                     $_POST['phone'] ?? '',
                     $_POST['experience'] ?? '',
-                    $_POST['cover_letter'] ?? ''
+                    $_POST['cover_letter'] ?? '',
+                    $cvFilename,
+                    $cvPath
                 ]);
                 
                 echo json_encode(['success' => true, 'message' => 'Application submitted successfully']);
