@@ -88,12 +88,23 @@ try {
             'introduction' => 'TEXT',
             'quick_info_box' => 'TEXT',
             'emi_example' => 'TEXT',
+            'what_is_loan' => 'TEXT',
             'benefits' => 'TEXT',
+            'who_should_apply' => 'TEXT',
             'eligibility_criteria' => 'TEXT',
             'documents_required' => 'TEXT',
+            'interest_rates' => 'TEXT',
+            'finonest_process' => 'TEXT',
+            'why_choose_finonest' => 'TEXT',
+            'customer_testimonials' => 'TEXT',
+            'common_mistakes' => 'TEXT',
+            'mid_blog_cta' => 'TEXT',
             'faqs' => 'TEXT',
+            'service_areas' => 'TEXT',
+            'related_blogs' => 'TEXT',
             'final_cta' => 'TEXT',
-            'disclaimer' => 'TEXT'
+            'disclaimer' => 'TEXT',
+            'trust_footer' => 'TEXT'
         ];
         
         foreach ($newColumns as $column => $type) {
@@ -206,9 +217,11 @@ try {
 
             $stmt = $pdo->prepare("
                 INSERT INTO blogs (title, slug, excerpt, content, category, author, status, image_url, video_url, meta_tags,
-                table_of_contents, introduction, quick_info_box, emi_example, benefits, eligibility_criteria,
-                documents_required, faqs, final_cta, disclaimer) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                table_of_contents, introduction, quick_info_box, emi_example, what_is_loan, benefits, who_should_apply,
+                eligibility_criteria, documents_required, interest_rates, finonest_process, why_choose_finonest,
+                customer_testimonials, common_mistakes, mid_blog_cta, faqs, service_areas, related_blogs,
+                final_cta, disclaimer, trust_footer) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -226,12 +239,23 @@ try {
                 $input['introduction'] ?? null,
                 $input['quick_info_box'] ?? null,
                 $input['emi_example'] ?? null,
+                $input['what_is_loan'] ?? null,
                 $input['benefits'] ?? null,
+                $input['who_should_apply'] ?? null,
                 $input['eligibility_criteria'] ?? null,
                 $input['documents_required'] ?? null,
+                $input['interest_rates'] ?? null,
+                $input['finonest_process'] ?? null,
+                $input['why_choose_finonest'] ?? null,
+                $input['customer_testimonials'] ?? null,
+                $input['common_mistakes'] ?? null,
+                $input['mid_blog_cta'] ?? null,
                 $input['faqs'] ?? null,
+                $input['service_areas'] ?? null,
+                $input['related_blogs'] ?? null,
                 $input['final_cta'] ?? null,
-                $input['disclaimer'] ?? null
+                $input['disclaimer'] ?? null,
+                $input['trust_footer'] ?? null
             ]);
 
             $blogId = $pdo->lastInsertId();
@@ -308,6 +332,22 @@ try {
             if (isset($input['meta_tags'])) {
                 $updateFields[] = "meta_tags = ?";
                 $params[] = $input['meta_tags'] ?: null;
+            }
+            
+            // Blog section fields
+            $sectionFields = [
+                'table_of_contents', 'introduction', 'quick_info_box', 'emi_example', 'what_is_loan',
+                'benefits', 'who_should_apply', 'eligibility_criteria', 'documents_required',
+                'interest_rates', 'finonest_process', 'why_choose_finonest', 'customer_testimonials',
+                'common_mistakes', 'mid_blog_cta', 'faqs', 'service_areas', 'related_blogs',
+                'final_cta', 'disclaimer', 'trust_footer'
+            ];
+            
+            foreach ($sectionFields as $field) {
+                if (isset($input[$field])) {
+                    $updateFields[] = "$field = ?";
+                    $params[] = $input[$field] ?: null;
+                }
             }
             
             if (empty($updateFields)) {
