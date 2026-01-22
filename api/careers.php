@@ -193,12 +193,35 @@ try {
                         mkdir($uploadDir, 0755, true);
                     }
                     
+                    // Validate file type
+                    $allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                    $fileType = $_FILES['cv_file']['type'];
+                    $fileExtension = strtolower(pathinfo($_FILES['cv_file']['name'], PATHINFO_EXTENSION));
+                    $allowedExtensions = ['pdf', 'doc', 'docx'];
+                    
+                    if (!in_array($fileType, $allowedTypes) && !in_array($fileExtension, $allowedExtensions)) {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Invalid file type. Only PDF, DOC, and DOCX files are allowed.']);
+                        exit();
+                    }
+                    
+                    // Validate file size (5MB max)
+                    if ($_FILES['cv_file']['size'] > 5 * 1024 * 1024) {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'File too large. Maximum size is 5MB.']);
+                        exit();
+                    }
+                    
                     $cvFilename = $_FILES['cv_file']['name'];
                     $fileName = time() . '_' . basename($cvFilename);
                     $targetPath = $uploadDir . $fileName;
                     
                     if (move_uploaded_file($_FILES['cv_file']['tmp_name'], $targetPath)) {
                         $cvPath = 'uploads/cvs/' . $fileName;
+                    } else {
+                        http_response_code(500);
+                        echo json_encode(['error' => 'Failed to upload CV file.']);
+                        exit();
                     }
                 }
                 
@@ -297,6 +320,12 @@ try {
                 $stmt = $db->prepare("DELETE FROM career_jobs WHERE id=?");
                 $stmt->execute([$jobId]);
                 echo json_encode(['success' => true, 'message' => 'Job deleted successfully']);
+            } elseif (isset($pathParts[2]) && $pathParts[2] === 'applications' && isset($pathParts[3])) {
+                // Delete application
+                $applicationId = $pathParts[3];
+                $stmt = $db->prepare("DELETE FROM career_applications WHERE id=?");
+                $stmt->execute([$applicationId]);
+                echo json_encode(['success' => true, 'message' => 'Application deleted successfully']);
             }
             break;
 
