@@ -93,7 +93,10 @@ try {
 
         case 'POST':
             if (isset($pathParts[2]) && $pathParts[2] === 'jobs') {
-                // Create job with image upload
+                // Check if this is an update (has job ID in URL)
+                $isUpdate = isset($pathParts[3]) && is_numeric($pathParts[3]);
+                $jobId = $isUpdate ? $pathParts[3] : null;
+                
                 $title = $_POST['title'] ?? '';
                 $department = $_POST['department'] ?? '';
                 $description = $_POST['description'] ?? '';
@@ -119,19 +122,50 @@ try {
                     }
                 }
                 
-                $stmt = $db->prepare("INSERT INTO career_jobs (title, department, location, type, salary, description, requirements, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([
-                    $title,
-                    $department,
-                    $_POST['location'] ?? '',
-                    $_POST['type'] ?? 'Full-time',
-                    $_POST['salary'] ?? '',
-                    $description,
-                    $_POST['requirements'] ?? '',
-                    $imagePath
-                ]);
-                
-                echo json_encode(['success' => true, 'message' => 'Job created successfully', 'job_id' => $db->lastInsertId()]);
+                if ($isUpdate) {
+                    // Update existing job
+                    if ($imagePath) {
+                        $stmt = $db->prepare("UPDATE career_jobs SET title=?, department=?, location=?, type=?, salary=?, description=?, requirements=?, image=? WHERE id=?");
+                        $stmt->execute([
+                            $title,
+                            $department,
+                            $_POST['location'] ?? '',
+                            $_POST['type'] ?? 'Full-time',
+                            $_POST['salary'] ?? '',
+                            $description,
+                            $_POST['requirements'] ?? '',
+                            $imagePath,
+                            $jobId
+                        ]);
+                    } else {
+                        $stmt = $db->prepare("UPDATE career_jobs SET title=?, department=?, location=?, type=?, salary=?, description=?, requirements=? WHERE id=?");
+                        $stmt->execute([
+                            $title,
+                            $department,
+                            $_POST['location'] ?? '',
+                            $_POST['type'] ?? 'Full-time',
+                            $_POST['salary'] ?? '',
+                            $description,
+                            $_POST['requirements'] ?? '',
+                            $jobId
+                        ]);
+                    }
+                    echo json_encode(['success' => true, 'message' => 'Job updated successfully']);
+                } else {
+                    // Create new job
+                    $stmt = $db->prepare("INSERT INTO career_jobs (title, department, location, type, salary, description, requirements, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([
+                        $title,
+                        $department,
+                        $_POST['location'] ?? '',
+                        $_POST['type'] ?? 'Full-time',
+                        $_POST['salary'] ?? '',
+                        $description,
+                        $_POST['requirements'] ?? '',
+                        $imagePath
+                    ]);
+                    echo json_encode(['success' => true, 'message' => 'Job created successfully', 'job_id' => $db->lastInsertId()]);
+                }
             } elseif (isset($pathParts[2]) && $pathParts[2] === 'apply') {
                 // Submit application with CV upload
                 $job_id = $_POST['job_id'] ?? '';
