@@ -179,15 +179,27 @@ try {
 
         case 'PUT':
             if (isset($pathParts[2]) && $pathParts[2] === 'jobs' && isset($pathParts[3])) {
-                // Update job
+                // Update job - Parse input for PUT request
                 $jobId = $pathParts[3];
-                $title = $_POST['title'] ?? '';
-                $department = $_POST['department'] ?? '';
-                $description = $_POST['description'] ?? '';
+                
+                // For PUT requests, we need to parse the input differently
+                $input = [];
+                if ($_SERVER['CONTENT_TYPE'] && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+                    // Handle multipart form data for PUT
+                    $input = $_POST;
+                } else {
+                    // Handle JSON input
+                    $rawInput = file_get_contents('php://input');
+                    parse_str($rawInput, $input);
+                }
+                
+                $title = $input['title'] ?? $_POST['title'] ?? '';
+                $department = $input['department'] ?? $_POST['department'] ?? '';
+                $description = $input['description'] ?? $_POST['description'] ?? '';
                 
                 if (!$title || !$department || !$description) {
                     http_response_code(400);
-                    echo json_encode(['error' => 'Missing required fields']);
+                    echo json_encode(['error' => 'Missing required fields', 'received' => $input]);
                     exit();
                 }
                 
@@ -211,11 +223,11 @@ try {
                     $stmt->execute([
                         $title,
                         $department,
-                        $_POST['location'] ?? '',
-                        $_POST['type'] ?? 'Full-time',
-                        $_POST['salary'] ?? '',
+                        $input['location'] ?? $_POST['location'] ?? '',
+                        $input['type'] ?? $_POST['type'] ?? 'Full-time',
+                        $input['salary'] ?? $_POST['salary'] ?? '',
                         $description,
-                        $_POST['requirements'] ?? '',
+                        $input['requirements'] ?? $_POST['requirements'] ?? '',
                         $imagePath,
                         $jobId
                     ]);
@@ -224,11 +236,11 @@ try {
                     $stmt->execute([
                         $title,
                         $department,
-                        $_POST['location'] ?? '',
-                        $_POST['type'] ?? 'Full-time',
-                        $_POST['salary'] ?? '',
+                        $input['location'] ?? $_POST['location'] ?? '',
+                        $input['type'] ?? $_POST['type'] ?? 'Full-time',
+                        $input['salary'] ?? $_POST['salary'] ?? '',
                         $description,
-                        $_POST['requirements'] ?? '',
+                        $input['requirements'] ?? $_POST['requirements'] ?? '',
                         $jobId
                     ]);
                 }
