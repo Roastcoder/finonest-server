@@ -338,6 +338,8 @@ function updateApplication($applicationId) {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to update application']);
     }
+}
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
