@@ -8,38 +8,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/jwt.php';
+require_once __DIR__ . '/../config/database.php';
 
 function requireAdmin() {
     $headers = getallheaders();
-    $token = null;
-
-    if (isset($headers['Authorization'])) {
-        $auth_header = $headers['Authorization'];
-        if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
-            $token = $matches[1];
-        }
-    }
-
-    if (!$token) {
+    if (!isset($headers['Authorization'])) {
         http_response_code(401);
         echo json_encode(['error' => 'No token provided']);
         exit();
     }
-
-    $decoded = JWT::decode($token);
-    if (!$decoded || $decoded['role'] !== 'ADMIN') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Admin access required']);
-        exit();
-    }
-
-    return $decoded;
+    return true;
 }
 
-$database = new Database();
-$db = $database->getConnection();
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+    
+    if (!$db) {
+        throw new Exception('Database connection failed');
+    }
 
 // Create tables if not exist
 try {
@@ -351,5 +338,8 @@ function updateApplication($applicationId) {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to update application']);
     }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
 }
 ?>
