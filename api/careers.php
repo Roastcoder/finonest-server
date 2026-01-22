@@ -1,4 +1,8 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
+ini_set('log_errors', 0);
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -42,9 +46,9 @@ try {
 
     // Add image column if it doesn't exist (for existing tables)
     try {
-        $db->exec("ALTER TABLE career_jobs ADD COLUMN image VARCHAR(500) NULL");
+        @$db->exec("ALTER TABLE career_jobs ADD COLUMN image VARCHAR(500) NULL");
     } catch (Exception $e) {
-        // Column already exists, ignore error
+        // Silently ignore if column exists
     }
 
     $createApplicationsTable = "CREATE TABLE IF NOT EXISTS career_applications (
