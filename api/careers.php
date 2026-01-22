@@ -177,6 +177,76 @@ try {
             }
             break;
 
+        case 'PUT':
+            if (isset($pathParts[2]) && $pathParts[2] === 'jobs' && isset($pathParts[3])) {
+                // Update job
+                $jobId = $pathParts[3];
+                $title = $_POST['title'] ?? '';
+                $department = $_POST['department'] ?? '';
+                $description = $_POST['description'] ?? '';
+                
+                if (!$title || !$department || !$description) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Missing required fields']);
+                    exit();
+                }
+                
+                $imagePath = null;
+                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    $uploadDir = __DIR__ . '/../uploads/job-images/';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+                    
+                    $fileName = time() . '_' . basename($_FILES['image']['name']);
+                    $targetPath = $uploadDir . $fileName;
+                    
+                    if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
+                        $imagePath = 'https://api.finonest.com/uploads/job-images/' . $fileName;
+                    }
+                }
+                
+                if ($imagePath) {
+                    $stmt = $db->prepare("UPDATE career_jobs SET title=?, department=?, location=?, type=?, salary=?, description=?, requirements=?, image=? WHERE id=?");
+                    $stmt->execute([
+                        $title,
+                        $department,
+                        $_POST['location'] ?? '',
+                        $_POST['type'] ?? 'Full-time',
+                        $_POST['salary'] ?? '',
+                        $description,
+                        $_POST['requirements'] ?? '',
+                        $imagePath,
+                        $jobId
+                    ]);
+                } else {
+                    $stmt = $db->prepare("UPDATE career_jobs SET title=?, department=?, location=?, type=?, salary=?, description=?, requirements=? WHERE id=?");
+                    $stmt->execute([
+                        $title,
+                        $department,
+                        $_POST['location'] ?? '',
+                        $_POST['type'] ?? 'Full-time',
+                        $_POST['salary'] ?? '',
+                        $description,
+                        $_POST['requirements'] ?? '',
+                        $jobId
+                    ]);
+                }
+                
+                echo json_encode(['success' => true, 'message' => 'Job updated successfully']);
+            }
+            break;
+
+        case 'DELETE':
+            if (isset($pathParts[2]) && $pathParts[2] === 'jobs' && isset($pathParts[3])) {
+                // Delete job
+                $jobId = $pathParts[3];
+                $stmt = $db->prepare("DELETE FROM career_jobs WHERE id=?");
+                $stmt->execute([$jobId]);
+                echo json_encode(['success' => true, 'message' => 'Job deleted successfully']);
+            }
+            break;
+
         default:
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
