@@ -40,6 +40,13 @@ try {
     )";
     $db->exec($createJobsTable);
 
+    // Add image column if it doesn't exist (for existing tables)
+    try {
+        $db->exec("ALTER TABLE career_jobs ADD COLUMN image VARCHAR(500) NULL");
+    } catch (Exception $e) {
+        // Column already exists, ignore error
+    }
+
     $createApplicationsTable = "CREATE TABLE IF NOT EXISTS career_applications (
         id INT AUTO_INCREMENT PRIMARY KEY,
         job_id INT NOT NULL,
