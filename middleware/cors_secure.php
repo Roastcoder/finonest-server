@@ -6,26 +6,23 @@ class SecureCorsMiddleware {
     ];
     
     public static function handle() {
-        // Force clear any existing headers by setting them to empty first
-        @header('Access-Control-Allow-Origin:', true);
-        @header('Access-Control-Allow-Methods:', true);
-        @header('Access-Control-Allow-Headers:', true);
-        @header('Access-Control-Allow-Credentials:', true);
+        // Remove any existing headers first
+        header_remove('Access-Control-Allow-Origin');
+        header_remove('Access-Control-Allow-Methods');
+        header_remove('Access-Control-Allow-Headers');
+        header_remove('Access-Control-Allow-Credentials');
         
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
         
-        // Always set our secure headers
+        // Set CORS headers only once
         if (in_array($origin, self::$allowedOrigins)) {
-            header("Access-Control-Allow-Origin: $origin", true);
-            header('Access-Control-Allow-Credentials: true', true);
-        } else {
-            // Don't set any origin header for unauthorized origins
-            header('Access-Control-Allow-Origin: null', true);
+            header("Access-Control-Allow-Origin: $origin");
+            header('Access-Control-Allow-Credentials: true');
         }
         
-        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS', true);
-        header('Access-Control-Allow-Headers: Content-Type, Authorization', true);
-        header('Access-Control-Max-Age: 86400', true);
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
+        header('Access-Control-Max-Age: 86400');
         
         // Handle preflight OPTIONS request
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -33,7 +30,7 @@ class SecureCorsMiddleware {
             exit();
         }
         
-        header('Content-Type: application/json', true);
+        header('Content-Type: application/json');
     }
 }
 ?>

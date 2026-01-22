@@ -1,22 +1,9 @@
 RewriteEngine On
 
-# CORS Headers - Override any existing headers
-Header always unset Access-Control-Allow-Origin
-Header always unset Access-Control-Allow-Methods  
-Header always unset Access-Control-Allow-Headers
-Header always unset Access-Control-Allow-Credentials
-
-# Set secure CORS headers for allowed origins
-SetEnvIf Origin "^https://(www\.)?finonest\.com$" CORS_ORIGIN=$0
-Header always set Access-Control-Allow-Origin "%{CORS_ORIGIN}e" env=CORS_ORIGIN
-Header always set Access-Control-Allow-Credentials "true" env=CORS_ORIGIN
-Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
-Header always set Access-Control-Max-Age "86400"
-
-# Handle preflight OPTIONS requests
+# Global CORS preflight handling for all API routes
 RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ - [R=204,L]
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ cors_handler.php [QSA,L]
 
 # API Routes
 RewriteRule ^api/auth/(.*)$ api/auth.php/$1 [QSA,L]
