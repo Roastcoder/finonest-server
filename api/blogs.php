@@ -82,6 +82,27 @@ try {
             $pdo->exec("ALTER TABLE blogs ADD COLUMN meta_tags TEXT AFTER video_url");
         }
         
+        // Add new blog section columns
+        $newColumns = [
+            'table_of_contents' => 'TEXT',
+            'introduction' => 'TEXT',
+            'quick_info_box' => 'TEXT',
+            'emi_example' => 'TEXT',
+            'benefits' => 'TEXT',
+            'eligibility_criteria' => 'TEXT',
+            'documents_required' => 'TEXT',
+            'faqs' => 'TEXT',
+            'final_cta' => 'TEXT',
+            'disclaimer' => 'TEXT'
+        ];
+        
+        foreach ($newColumns as $column => $type) {
+            $result = $pdo->query("SHOW COLUMNS FROM blogs LIKE '$column'");
+            if ($result->rowCount() == 0) {
+                $pdo->exec("ALTER TABLE blogs ADD COLUMN $column $type AFTER meta_tags");
+            }
+        }
+        
         // Create index if not exists
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_slug ON blogs(slug)");
     } catch (Exception $e) {
@@ -184,8 +205,10 @@ try {
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $input['title']), '-'));
 
             $stmt = $pdo->prepare("
-                INSERT INTO blogs (title, slug, excerpt, content, category, author, status, image_url, video_url, meta_tags) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO blogs (title, slug, excerpt, content, category, author, status, image_url, video_url, meta_tags,
+                table_of_contents, introduction, quick_info_box, emi_example, benefits, eligibility_criteria,
+                documents_required, faqs, final_cta, disclaimer) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -198,7 +221,17 @@ try {
                 $input['status'] ?? 'draft',
                 $input['image_url'] ?? null,
                 $input['video_url'] ?? null,
-                $input['meta_tags'] ?? null
+                $input['meta_tags'] ?? null,
+                $input['table_of_contents'] ?? null,
+                $input['introduction'] ?? null,
+                $input['quick_info_box'] ?? null,
+                $input['emi_example'] ?? null,
+                $input['benefits'] ?? null,
+                $input['eligibility_criteria'] ?? null,
+                $input['documents_required'] ?? null,
+                $input['faqs'] ?? null,
+                $input['final_cta'] ?? null,
+                $input['disclaimer'] ?? null
             ]);
 
             $blogId = $pdo->lastInsertId();
