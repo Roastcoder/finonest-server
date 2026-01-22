@@ -14,10 +14,13 @@ class SecureCorsMiddleware {
         
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
         
-        // Set CORS headers only once
+        // Always set CORS headers for allowed origins
         if (in_array($origin, self::$allowedOrigins)) {
             header("Access-Control-Allow-Origin: $origin");
             header('Access-Control-Allow-Credentials: true');
+        } else {
+            // Set wildcard for development/testing
+            header('Access-Control-Allow-Origin: *');
         }
         
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
