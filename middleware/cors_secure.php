@@ -6,6 +6,12 @@ class SecureCorsMiddleware {
     ];
     
     public static function handle() {
+        // Clear any existing CORS headers first
+        header_remove('Access-Control-Allow-Origin');
+        header_remove('Access-Control-Allow-Methods');
+        header_remove('Access-Control-Allow-Headers');
+        header_remove('Access-Control-Allow-Credentials');
+        
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
         
         // Check if origin is allowed
