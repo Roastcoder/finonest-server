@@ -1,8 +1,8 @@
 RewriteEngine On
 
-# Handle preflight OPTIONS requests
+# Handle preflight OPTIONS requests for CORS
 RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=200,L]
+RewriteRule ^api/careers/(.*)$ api/careers.php [QSA,L]
 
 # API Routes
 RewriteRule ^api/auth/(.*)$ api/auth.php/$1 [QSA,L]
