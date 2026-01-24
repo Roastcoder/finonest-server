@@ -71,7 +71,10 @@ try {
         ['razorpay_key', 'rzp_test_default', 'Razorpay API Key for payments'],
         ['razorpay_secret', '', 'Razorpay Secret Key (keep secure)'],
         ['site_name', 'Finonest', 'Website name'],
-        ['contact_email', 'info@finonest.com', 'Contact email address']
+        ['contact_email', 'info@finonest.com', 'Contact email address'],
+        ['gemini_api_key', 'AIzaSyDZ8XZq09tzFqvuTAbcJlQscS_WUNDbkAI', 'Google Gemini API key for AI features'],
+        ['gemini_model', 'gemini-2.5-flash-lite', 'Gemini model for AI operations'],
+        ['ai_enabled', 'enabled', 'Enable or disable AI features']
     ];
     
     foreach ($defaultSettings as $setting) {
