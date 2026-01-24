@@ -103,6 +103,7 @@ try {
             'service_areas' => 'TEXT',
             'related_blogs' => 'TEXT',
             'final_cta' => 'TEXT',
+            'final_cta_text' => 'TEXT',
             'disclaimer' => 'TEXT',
             'trust_footer' => 'TEXT'
         ];
@@ -220,8 +221,8 @@ try {
                 table_of_contents, introduction, quick_info_box, emi_example, what_is_loan, benefits, who_should_apply,
                 eligibility_criteria, documents_required, interest_rates, finonest_process, why_choose_finonest,
                 customer_testimonials, common_mistakes, mid_blog_cta, faqs, service_areas, related_blogs,
-                final_cta, disclaimer, trust_footer) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                final_cta, final_cta_text, disclaimer, trust_footer) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -254,6 +255,7 @@ try {
                 $input['service_areas'] ?? null,
                 $input['related_blogs'] ?? null,
                 $input['final_cta'] ?? null,
+                $input['final_cta_text'] ?? null,
                 $input['disclaimer'] ?? null,
                 $input['trust_footer'] ?? null
             ]);
@@ -340,7 +342,7 @@ try {
                 'benefits', 'who_should_apply', 'eligibility_criteria', 'documents_required',
                 'interest_rates', 'finonest_process', 'why_choose_finonest', 'customer_testimonials',
                 'common_mistakes', 'mid_blog_cta', 'faqs', 'service_areas', 'related_blogs',
-                'final_cta', 'disclaimer', 'trust_footer'
+                'final_cta', 'final_cta_text', 'disclaimer', 'trust_footer'
             ];
             
             foreach ($sectionFields as $field) {
