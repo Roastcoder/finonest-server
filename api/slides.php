@@ -20,15 +20,6 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
-    
-    // Insert default slides if table is empty
-    $stmt = $pdo->query("SELECT COUNT(*) FROM slides");
-    if ($stmt->fetchColumn() == 0) {
-        $pdo->exec("INSERT INTO slides (title, subtitle, description, image_url, button_text, button_link, order_position, is_active) VALUES
-            ('Your Dream Home', 'with Simpler Faster Friendlier Home Loans', 'Get the best home loan rates with 100% paperless processing', '/assets/hero-home-loan.jpg', 'Check Now', '/services/home-loan', 1, TRUE),
-            ('Your Dream Car', 'with Simpler Faster Friendlier Vehicle Loans', 'Get the lowest vehicle loan rates with 100% paperless processing', '/assets/hero-car-loan.jpg', 'Check Now', '/services/car-loan', 2, TRUE),
-            ('Business Growth', 'with Simpler Faster Friendlier Business Loans', 'Expand your business with quick disbursal within 48 hours', '/assets/hero-business-loan.jpg', 'Check Now', '/services/business-loan', 3, TRUE)");
-    }
 } catch (Exception $e) {
     // Continue if table creation fails
 }
@@ -127,7 +118,8 @@ function handlePut($pdo, $pathParts) {
         return;
     }
 
-    $slideId = end($pathParts);
+    // Get slide ID from query parameter or path
+    $slideId = $_GET['id'] ?? end($pathParts);
     if (!is_numeric($slideId)) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid slide ID']);
@@ -184,7 +176,8 @@ function handleDelete($pdo, $pathParts) {
         return;
     }
 
-    $slideId = end($pathParts);
+    // Get slide ID from query parameter or path
+    $slideId = $_GET['id'] ?? end($pathParts);
     if (!is_numeric($slideId)) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid slide ID']);
