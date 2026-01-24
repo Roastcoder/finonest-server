@@ -20,7 +20,7 @@ try {
 }
 
 function requireAdmin() {
-    $headers = apache_request_headers() ?: [];
+    $headers = getallheaders() ?: [];
     $token = null;
 
     foreach ($headers as $key => $value) {
@@ -40,7 +40,7 @@ function requireAdmin() {
 
     try {
         $decoded = JWT::decode($token);
-        if (!$decoded || $decoded['role'] !== 'ADMIN') {
+        if (!$decoded || !isset($decoded['role']) || $decoded['role'] !== 'ADMIN') {
             http_response_code(403);
             echo json_encode(['error' => 'Admin access required']);
             exit();
@@ -49,7 +49,7 @@ function requireAdmin() {
     } catch (Exception $e) {
         error_log('JWT decode error: ' . $e->getMessage());
         http_response_code(401);
-        echo json_encode(['error' => 'Invalid token']);
+        echo json_encode(['error' => 'Invalid token: ' . $e->getMessage()]);
         exit();
     }
 }
@@ -195,14 +195,26 @@ function getAllSettings() {
 function updateSetting($key) {
     global $db;
     
-    requireAdmin();
+    try {
+        requireAdmin();
+    } catch (Exception $e) {
+        error_log('Admin auth error: ' . $e->getMessage());
+        return;
+    }
     
     $input = json_decode(file_get_contents('php://input'), true);
-    $value = $input['value'] ?? '';
+    
+    if (!$input || !isset($input['value'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid input data']);
+        return;
+    }
+    
+    $value = $input['value'];
     
     try {
         // First try to update existing setting
-        $query = "UPDATE system_settings SET setting_value = ? WHERE setting_key = ?";
+        $query = "UPDATE system_settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([$value, $key]);
         
@@ -213,9 +225,9 @@ function updateSetting($key) {
             ]);
         } else {
             // Setting doesn't exist, create it
-            $insertQuery = "INSERT INTO system_settings (setting_key, setting_value, description) VALUES (?, ?, ?)";
+            $insertQuery = "INSERT INTO system_settings (setting_key, setting_value, description, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
             $insertStmt = $db->prepare($insertQuery);
-            $description = $key === 'razorpay_secret' ? 'Razorpay Secret Key (keep secure)' : '';
+            $description = getSettingDescription($key);
             $insertStmt->execute([$key, $value, $description]);
             
             echo json_encode([
@@ -226,8 +238,21 @@ function updateSetting($key) {
     } catch (Exception $e) {
         error_log('Error in updateSetting: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to update setting']);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
+}
+
+function getSettingDescription($key) {
+    $descriptions = [
+        'gemini_api_key' => 'Google Gemini API key for AI features',
+        'gemini_model' => 'Gemini model for AI operations',
+        'ai_enabled' => 'Enable or disable AI features',
+        'razorpay_key' => 'Razorpay API Key for payments',
+        'razorpay_secret' => 'Razorpay Secret Key (keep secure)',
+        'site_name' => 'Website name',
+        'contact_email' => 'Contact email address'
+    ];
+    return $descriptions[$key] ?? '';
 }
 
 function createSetting() {

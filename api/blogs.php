@@ -84,6 +84,8 @@ try {
         
         // Add new blog section columns
         $newColumns = [
+            'meta_title' => 'VARCHAR(255)',
+            'meta_description' => 'TEXT',
             'table_of_contents' => 'TEXT',
             'introduction' => 'TEXT',
             'quick_info_box' => 'TEXT',
@@ -217,12 +219,12 @@ try {
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $input['title']), '-'));
 
             $stmt = $pdo->prepare("
-                INSERT INTO blogs (title, slug, excerpt, content, category, author, status, image_url, video_url, meta_tags,
+                INSERT INTO blogs (title, slug, excerpt, content, category, author, status, image_url, video_url, meta_title, meta_description, meta_tags,
                 table_of_contents, introduction, quick_info_box, emi_example, what_is_loan, benefits, who_should_apply,
                 eligibility_criteria, documents_required, interest_rates, finonest_process, why_choose_finonest,
                 customer_testimonials, common_mistakes, mid_blog_cta, faqs, service_areas, related_blogs,
                 final_cta, final_cta_text, disclaimer, trust_footer) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -235,6 +237,8 @@ try {
                 $input['status'] ?? 'draft',
                 $input['image_url'] ?? null,
                 $input['video_url'] ?? null,
+                $input['meta_title'] ?? null,
+                $input['meta_description'] ?? null,
                 $input['meta_tags'] ?? null,
                 $input['table_of_contents'] ?? null,
                 $input['introduction'] ?? null,
@@ -329,6 +333,16 @@ try {
             if (isset($input['video_url'])) {
                 $updateFields[] = "video_url = ?";
                 $params[] = $input['video_url'] ?: null;
+            }
+            
+            if (isset($input['meta_title'])) {
+                $updateFields[] = "meta_title = ?";
+                $params[] = $input['meta_title'] ?: null;
+            }
+            
+            if (isset($input['meta_description'])) {
+                $updateFields[] = "meta_description = ?";
+                $params[] = $input['meta_description'] ?: null;
             }
             
             if (isset($input['meta_tags'])) {
