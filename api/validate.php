@@ -1,7 +1,5 @@
 <?php
-require_once __DIR__ . '/../middleware/cors_secure.php';
-SecureCorsMiddleware::handle();
-
+require_once __DIR__ . '/../cors-handler.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/jwt.php';
 require_once __DIR__ . '/../models/User.php';
