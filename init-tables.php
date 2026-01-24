@@ -29,6 +29,23 @@ try {
         }
     }
     
+    // Create slides table
+    $slidesSchema = file_get_contents('create-slides-table.sql');
+    $slidesStatements = explode(';', $slidesSchema);
+    
+    foreach ($slidesStatements as $statement) {
+        $statement = trim($statement);
+        if (!empty($statement)) {
+            try {
+                $db->exec($statement);
+            } catch (PDOException $e) {
+                if (strpos($e->getMessage(), 'already exists') === false && strpos($e->getMessage(), 'Duplicate entry') === false) {
+                    echo "Warning: " . $e->getMessage() . "\n";
+                }
+            }
+        }
+    }
+    
     // Initialize banker tables
     require_once 'models/Banker.php';
     new Banker($db);
