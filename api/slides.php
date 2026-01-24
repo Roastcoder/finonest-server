@@ -103,7 +103,7 @@ function handlePost($pdo) {
             $input['button_text'] ?? '',
             $input['button_link'] ?? '',
             $input['order_position'] ?? 1,
-            $input['is_active'] ?? true
+            isset($input['is_active']) ? ($input['is_active'] ? 1 : 0) : 1
         ]);
         
         $slideId = $pdo->lastInsertId();
@@ -157,7 +157,7 @@ function handlePut($pdo, $pathParts) {
             $input['button_text'] ?? '',
             $input['button_link'] ?? '',
             $input['order_position'] ?? 1,
-            $input['is_active'] ?? true,
+            isset($input['is_active']) ? ($input['is_active'] ? 1 : 0) : 1,
             $slideId
         ]);
         
