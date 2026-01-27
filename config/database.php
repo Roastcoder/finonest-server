@@ -24,4 +24,10 @@ class Database {
         return $this->conn;
     }
 }
+
+// Helper function for backward compatibility
+function getDBConnection() {
+    $database = new Database();
+    return $database->getConnection();
+}
 ?>
