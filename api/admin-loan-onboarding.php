@@ -98,11 +98,15 @@ try {
     $stmt->execute();
     $applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Parse JSON responses for display
+    // Parse JSON responses and fix field names for frontend compatibility
     foreach ($applications as &$app) {
         $app['pan_response'] = json_decode($app['pan_response'], true);
         $app['credit_response'] = json_decode($app['credit_response'], true);
         $app['vehicle_response'] = json_decode($app['vehicle_response'], true);
+        
+        // Map database fields to frontend expected fields
+        $app['status'] = $app['application_status'] ?? 'pending';
+        $app['step_completed'] = 6; // All onboarding applications are complete
     }
     
     echo json_encode([
