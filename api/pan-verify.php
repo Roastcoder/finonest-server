@@ -39,8 +39,8 @@ try {
     $stmt->execute(['base_url']);
     $apiUrl = $stmt->fetchColumn() ?: 'https://profilex-api.neokred.tech/core-svc/api/v2/exp/validation-service/pan-premium';
     
-    $stmt->execute(['client_hash_id']);
-    $clientHashId = $stmt->fetchColumn() ?: '';
+    $stmt->execute(['client_user_id']);
+    $clientUserId = $stmt->fetchColumn() ?: '';
     
     $stmt->execute(['secret_key']);
     $secretKey = $stmt->fetchColumn() ?: '';
@@ -54,7 +54,7 @@ try {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['pan' => $input['pan']]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'client-hash-id: ' . $clientHashId,
+        'client-user-id: ' . $clientUserId,
         'secret-key: ' . $secretKey,
         'access-key: ' . $accessKey,
         'Content-Type: application/json'
