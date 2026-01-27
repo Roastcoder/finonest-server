@@ -1,0 +1,59 @@
+<?php
+header('Content-Type: application/json');
+require_once '../config/database.php';
+require_once '../middleware/cors.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!isset($input['id_number']) || empty($input['id_number'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'RC number is required']);
+    exit;
+}
+
+try {
+    $pdo = getDBConnection();
+    
+    // Get SurePass API credentials from settings
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
+    
+    $stmt->execute(['surepass_api_url']);
+    $apiUrl = $stmt->fetchColumn() ?: 'https://kyc-api.surepass.io/api/v1/rc/rc-full';
+    
+    $stmt->execute(['surepass_token']);
+    $token = $stmt->fetchColumn() ?: '';
+    
+    // Call SurePass RC API
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $apiUrl);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($input));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($response === false || $httpCode !== 200) {
+        throw new Exception('API call failed');
+    }
+    
+    $data = json_decode($response, true);
+    echo json_encode($data);
+    
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'RC verification failed']);
+}
+?>

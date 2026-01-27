@@ -72,7 +72,18 @@ try {
         ['contact_email', 'info@finonest.com', 'Contact email address'],
         ['gemini_api_key', 'AIzaSyDZ8XZq09tzFqvuTAbcJlQscS_WUNDbkAI', 'Google Gemini API key for AI features'],
         ['gemini_model', 'gemini-2.5-flash-lite', 'Gemini model for AI operations'],
-        ['ai_enabled', 'enabled', 'Enable or disable AI features']
+        ['ai_enabled', 'enabled', 'Enable or disable AI features'],
+        ['pan_api_url', 'https://profilex-api.neokred.tech/core-svc/api/v2/exp/validation-service/pan-premium', 'PAN verification API URL'],
+        ['pan_client_user_id', '', 'PAN API client user ID'],
+        ['pan_secret_key', '', 'PAN API secret key'],
+        ['pan_access_key', '', 'PAN API access key'],
+        ['credit_api_url', 'https://profilex-api.neokred.tech/core-svc/api/v2/exp/user-profiling/credit-report', 'Credit report API URL'],
+        ['credit_client_user_id', '', 'Credit API client user ID'],
+        ['credit_secret_key', '', 'Credit API secret key'],
+        ['credit_access_key', '', 'Credit API access key'],
+        ['credit_service_id', '', 'Credit API service ID'],
+        ['surepass_api_url', 'https://kyc-api.surepass.io/api/v1/rc/rc-full', 'SurePass RC API URL'],
+        ['surepass_token', '', 'SurePass API token']
     ];
     
     foreach ($defaultSettings as $setting) {
@@ -248,7 +259,18 @@ function getSettingDescription($key) {
         'razorpay_key' => 'Razorpay API Key for payments',
         'razorpay_secret' => 'Razorpay Secret Key (keep secure)',
         'site_name' => 'Website name',
-        'contact_email' => 'Contact email address'
+        'contact_email' => 'Contact email address',
+        'pan_api_url' => 'PAN verification API URL',
+        'pan_client_user_id' => 'PAN API client user ID',
+        'pan_secret_key' => 'PAN API secret key',
+        'pan_access_key' => 'PAN API access key',
+        'credit_api_url' => 'Credit report API URL',
+        'credit_client_user_id' => 'Credit API client user ID',
+        'credit_secret_key' => 'Credit API secret key',
+        'credit_access_key' => 'Credit API access key',
+        'credit_service_id' => 'Credit API service ID',
+        'surepass_api_url' => 'SurePass RC API URL',
+        'surepass_token' => 'SurePass API token'
     ];
     return $descriptions[$key] ?? '';
 }
