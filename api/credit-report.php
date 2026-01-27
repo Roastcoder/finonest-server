@@ -40,7 +40,9 @@ try {
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
     
     $stmt->execute(['base_url']);
-    $apiUrl = $stmt->fetchColumn() ?: 'https://profilex-api.neokred.tech/core-svc/api/v2/exp/user-profiling/credit-report';
+    $baseUrl = $stmt->fetchColumn() ?: 'https://profilex-api.neokred.tech/core-svc/api/v2/';
+    
+    $apiUrl = $baseUrl . 'exp/user-profiling/credit-report';
     
     $stmt->execute(['client_user_id']);
     $clientUserId = $stmt->fetchColumn() ?: '';
