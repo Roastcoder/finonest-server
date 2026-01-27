@@ -25,11 +25,11 @@ try {
         throw new Exception('Database connection failed');
     }
     
-    $stmt = $pdo->prepare("SELECT * FROM loan_applications ORDER BY created_at DESC");
+    $stmt = $pdo->prepare("SELECT * FROM loan_onboarding ORDER BY created_at DESC");
     $stmt->execute();
     $applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Format the data
+    // Format the data for frontend compatibility
     foreach ($applications as &$app) {
         // Decode JSON fields
         if ($app['pan_response']) {
@@ -42,24 +42,24 @@ try {
             $app['vehicle_response'] = json_decode($app['vehicle_response'], true);
         }
         
-        // Add application_id if not exists
-        if (!isset($app['application_id'])) {
+        // Map fields for frontend compatibility
+        $app['mobile'] = $app['mobile'] ?? '';
+        $app['pan'] = $app['pan'] ?? '';
+        $app['status'] = $app['application_status'] ?? 'pending';
+        $app['type'] = 'VEHICLE';
+        $app['amount'] = $app['vehicle_value'] ?? 0;
+        $app['purpose'] = '';
+        $app['employment'] = $app['employment'] ?? 'salaried';
+        $app['user_id'] = 1;
+        
+        // Ensure application_id exists
+        if (!isset($app['application_id']) || empty($app['application_id'])) {
             $app['application_id'] = 'APP' . str_pad($app['id'], 6, '0', STR_PAD_LEFT);
         }
         
-        // Map status field
-        if (isset($app['application_status'])) {
-            $app['status'] = $app['application_status'];
-        }
-        
-        // Add step_completed if not exists
+        // Ensure step_completed exists
         if (!isset($app['step_completed'])) {
-            $app['step_completed'] = 6; // Assume complete if all data exists
-        }
-        
-        // Add vehicle_value if not exists
-        if (!isset($app['vehicle_value'])) {
-            $app['vehicle_value'] = 0;
+            $app['step_completed'] = 6;
         }
     }
     
