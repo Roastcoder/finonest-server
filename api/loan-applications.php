@@ -18,7 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    $pdo = getDBConnection();
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
+        throw new Exception('Database connection failed');
+    }
     
     $stmt = $pdo->prepare("SELECT * FROM loan_applications ORDER BY created_at DESC");
     $stmt->execute();
