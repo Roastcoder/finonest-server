@@ -55,12 +55,45 @@ try {
     $pdo = $database->getConnection();
     
     if (!$pdo) {
+        error_log('Database connection failed in admin-loan-onboarding.php');
         throw new Exception('Database connection failed');
     }
     
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
     $offset = ($page - 1) * $limit;
+    
+    // Check if table exists, create if not
+    $tableCheck = $pdo->query("SHOW TABLES LIKE 'loan_onboarding'");
+    if ($tableCheck->rowCount() == 0) {
+        // Create table if it doesn't exist
+        $createTable = "CREATE TABLE loan_onboarding (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            mobile VARCHAR(15) NOT NULL,
+            pan VARCHAR(10),
+            pan_name VARCHAR(255),
+            pan_response JSON,
+            dob VARCHAR(20),
+            gender VARCHAR(10),
+            credit_score INT,
+            credit_response JSON,
+            vehicle_rc VARCHAR(20),
+            vehicle_model VARCHAR(255),
+            vehicle_year INT,
+            vehicle_make VARCHAR(255),
+            owner_name VARCHAR(255),
+            fuel_type VARCHAR(50),
+            vehicle_color VARCHAR(50),
+            vehicle_response JSON,
+            vehicle_value INT,
+            income INT,
+            employment VARCHAR(100),
+            application_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        $pdo->exec($createTable);
+    }
     
     // Get total count
     $countStmt = $pdo->query("SELECT COUNT(*) FROM loan_onboarding");
@@ -87,6 +120,7 @@ try {
     ]);
     
 } catch (Exception $e) {
+    error_log('Admin Loan Onboarding Error: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Failed to fetch applications', 'error' => $e->getMessage()]);
 }
