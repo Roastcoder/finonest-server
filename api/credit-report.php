@@ -26,19 +26,19 @@ try {
     // Get API credentials from settings
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
     
-    $stmt->execute(['credit_api_url']);
+    $stmt->execute(['base_url']);
     $apiUrl = $stmt->fetchColumn() ?: 'https://profilex-api.neokred.tech/core-svc/api/v2/exp/user-profiling/credit-report';
     
-    $stmt->execute(['credit_client_user_id']);
-    $clientUserId = $stmt->fetchColumn() ?: '';
+    $stmt->execute(['client_hash_id']);
+    $clientHashId = $stmt->fetchColumn() ?: '';
     
-    $stmt->execute(['credit_secret_key']);
+    $stmt->execute(['secret_key']);
     $secretKey = $stmt->fetchColumn() ?: '';
     
-    $stmt->execute(['credit_access_key']);
+    $stmt->execute(['access_key']);
     $accessKey = $stmt->fetchColumn() ?: '';
     
-    $stmt->execute(['credit_service_id']);
+    $stmt->execute(['service_id']);
     $serviceId = $stmt->fetchColumn() ?: '';
     
     // Call external Credit Report API
@@ -47,7 +47,7 @@ try {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($input));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'client-user-id: ' . $clientUserId,
+        'client-hash-id: ' . $clientHashId,
         'secret-key: ' . $secretKey,
         'access-key: ' . $accessKey,
         'service-id: ' . $serviceId,

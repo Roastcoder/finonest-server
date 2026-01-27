@@ -23,16 +23,16 @@ try {
     // Get API credentials from settings
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
     
-    $stmt->execute(['pan_api_url']);
+    $stmt->execute(['base_url']);
     $apiUrl = $stmt->fetchColumn() ?: 'https://profilex-api.neokred.tech/core-svc/api/v2/exp/validation-service/pan-premium';
     
-    $stmt->execute(['pan_client_user_id']);
-    $clientUserId = $stmt->fetchColumn() ?: '';
+    $stmt->execute(['client_hash_id']);
+    $clientHashId = $stmt->fetchColumn() ?: '';
     
-    $stmt->execute(['pan_secret_key']);
+    $stmt->execute(['secret_key']);
     $secretKey = $stmt->fetchColumn() ?: '';
     
-    $stmt->execute(['pan_access_key']);
+    $stmt->execute(['access_key']);
     $accessKey = $stmt->fetchColumn() ?: '';
     
     // Call external PAN API
@@ -41,7 +41,7 @@ try {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['pan' => $input['pan']]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'client-user-id: ' . $clientUserId,
+        'client-hash-id: ' . $clientHashId,
         'secret-key: ' . $secretKey,
         'access-key: ' . $accessKey,
         'Content-Type: application/json'

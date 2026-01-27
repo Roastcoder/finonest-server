@@ -98,6 +98,11 @@ try {
         ['credit_secret_key', '', 'Credit API secret key'],
         ['credit_access_key', '', 'Credit API access key'],
         ['credit_service_id', '', 'Credit API service ID'],
+        ['client_hash_id', '', 'Client Hash ID for API authentication'],
+        ['base_url', 'https://profilex-api.neokred.tech/core-svc/api/v2/exp', 'Base URL for API calls'],
+        ['secret_key', '', 'Secret key for API authentication'],
+        ['access_key', '', 'Access key for API authentication'],
+        ['service_id', '', 'Service ID for Credit API'],
         ['surepass_api_url', 'https://kyc-api.surepass.io/api/v1/rc/rc-full', 'SurePass RC API URL'],
         ['surepass_token', '', 'SurePass API token']
     ];
