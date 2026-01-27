@@ -40,7 +40,11 @@ try {
     $apiUrl = $stmt->fetchColumn() ?: 'https://kyc-api.surepass.app/api/v1/rc/rc-full';
     
     $stmt->execute(['surepass_token']);
-    $token = $stmt->fetchColumn() ?: '';
+    $token = $stmt->fetchColumn();
+    
+    if (empty($token)) {
+        throw new Exception('SurePass token not configured');
+    }
     
     // Call SurePass RC API
     $ch = curl_init();
@@ -66,7 +70,8 @@ try {
     echo json_encode($data);
     
 } catch (Exception $e) {
+    error_log('RC Verification Error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'RC verification failed']);
+    echo json_encode(['success' => false, 'message' => 'RC verification failed', 'error' => $e->getMessage()]);
 }
 ?>
