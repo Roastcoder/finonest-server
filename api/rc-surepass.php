@@ -1,5 +1,13 @@
 <?php
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
+
 require_once '../config/database.php';
 require_once '../middleware/cors.php';
 
@@ -18,7 +26,12 @@ if (!isset($input['id_number']) || empty($input['id_number'])) {
 }
 
 try {
-    $pdo = getDBConnection();
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
+        throw new Exception('Database connection failed');
+    }
     
     // Get SurePass API credentials from settings
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
