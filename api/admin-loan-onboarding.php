@@ -51,7 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    $pdo = getDBConnection();
+    $database = new Database();
+    $pdo = $database->getConnection();
     
     if (!$pdo) {
         error_log('Database connection failed in admin-loan-onboarding.php');
