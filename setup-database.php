@@ -1,9 +1,17 @@
 <?php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
+
 require_once 'config/database.php';
 
 try {
     $pdo = getDBConnection();
-    echo "Creating database tables...\n";
     
     // 1. System Settings Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS system_settings (
@@ -14,7 +22,6 @@ try {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
-    echo "✓ system_settings table created\n";
     
     // 2. Loan Applications Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS loan_applications (
@@ -42,7 +49,6 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
-    echo "✓ loan_applications table created\n";
     
     // 3. Lender Policies Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS lender_policies (
@@ -73,7 +79,6 @@ try {
         roi_max DECIMAL(5,2) DEFAULT 15.0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
-    echo "✓ lender_policies table created\n";
     
     // Insert default settings
     $defaultSettings = [
@@ -101,7 +106,6 @@ try {
         $stmt = $pdo->prepare("INSERT IGNORE INTO system_settings (setting_key, setting_value, description) VALUES (?, ?, ?)");
         $stmt->execute($setting);
     }
-    echo "✓ Default settings inserted\n";
     
     // Insert sample lender policies
     $policies = [
@@ -115,13 +119,19 @@ try {
     foreach ($policies as $policy) {
         $stmt->execute($policy);
     }
-    echo "✓ Sample lender policies inserted\n";
     
-    echo "\n🎉 Database setup completed successfully!\n";
-    echo "Tables created: system_settings, loan_applications, lender_policies\n";
-    echo "Default data inserted: API settings, lender policies\n";
+    echo json_encode([
+        'success' => true,
+        'message' => 'Database setup completed successfully',
+        'tables' => ['system_settings', 'loan_applications', 'lender_policies']
+    ]);
     
 } catch (Exception $e) {
-    echo "❌ Error: " . $e->getMessage() . "\n";
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database setup failed',
+        'error' => $e->getMessage()
+    ]);
 }
 ?>
