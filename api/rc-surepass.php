@@ -37,7 +37,7 @@ try {
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
     
     $stmt->execute(['surepass_api_url']);
-    $apiUrl = $stmt->fetchColumn() ?: 'https://kyc-api.surepass.io/api/v1/rc/rc-full';
+    $apiUrl = $stmt->fetchColumn() ?: 'https://kyc-api.surepass.app/api/v1/rc/rc-full';
     
     $stmt->execute(['surepass_token']);
     $token = $stmt->fetchColumn() ?: '';
