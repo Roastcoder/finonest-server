@@ -12,7 +12,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 
 try {
-    $pdo = getDBConnection();
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
+        throw new Exception('Database connection failed');
+    }
     
     // Create table if not exists
     $createTable = "CREATE TABLE IF NOT EXISTS loan_applications (

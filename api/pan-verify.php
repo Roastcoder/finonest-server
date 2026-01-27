@@ -26,7 +26,12 @@ if (!isset($input['pan']) || empty($input['pan'])) {
 }
 
 try {
-    $pdo = getDBConnection();
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
+        throw new Exception('Database connection failed');
+    }
     
     // Get API credentials from settings
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
