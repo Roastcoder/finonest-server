@@ -87,12 +87,19 @@ try {
         $pdo->exec($createTable);
     }
     
-    // Get total count
-    $countStmt = $pdo->query("SELECT COUNT(*) FROM loan_onboarding");
+    // Get total count with simpler query
+    $countStmt = $pdo->prepare("SELECT COUNT(id) FROM loan_onboarding");
+    $countStmt->execute();
     $totalRecords = $countStmt->fetchColumn();
     
-    // Get applications with pagination
-    $stmt = $pdo->prepare("SELECT * FROM loan_onboarding ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
+    // Get applications with pagination and limited fields
+    $stmt = $pdo->prepare("SELECT id, mobile, pan, pan_name, dob, gender, credit_score, 
+                          vehicle_rc, vehicle_model, vehicle_make, vehicle_year, fuel_type, 
+                          vehicle_value, income, employment, application_status, 
+                          created_at, updated_at 
+                          FROM loan_onboarding 
+                          ORDER BY id DESC 
+                          LIMIT :limit OFFSET :offset");
     $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
@@ -100,9 +107,10 @@ try {
     
     // Parse JSON responses and fix field names for frontend compatibility
     foreach ($applications as &$app) {
-        $app['pan_response'] = json_decode($app['pan_response'], true);
-        $app['credit_response'] = json_decode($app['credit_response'], true);
-        $app['vehicle_response'] = json_decode($app['vehicle_response'], true);
+        // Only parse JSON if fields exist and are not null
+        $app['pan_response'] = !empty($app['pan_response']) ? json_decode($app['pan_response'], true) : null;
+        $app['credit_response'] = !empty($app['credit_response']) ? json_decode($app['credit_response'], true) : null;
+        $app['vehicle_response'] = !empty($app['vehicle_response']) ? json_decode($app['vehicle_response'], true) : null;
         
         // Map database fields to frontend expected fields
         $app['status'] = $app['application_status'] ?? 'pending';
