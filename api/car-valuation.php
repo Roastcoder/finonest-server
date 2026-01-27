@@ -27,17 +27,34 @@ try {
         throw new Exception('Database connection failed');
     }
     
-    // Get Gemini API settings
+    // Get Gemini API settings from system_settings table (same as blog generation)
     $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
     
     $stmt->execute(['gemini_api_key']);
-    $apiKey = $stmt->fetchColumn() ?: '';
+    $apiKey = $stmt->fetchColumn();
     
     $stmt->execute(['gemini_model']);
     $model = $stmt->fetchColumn() ?: 'gemini-2.5-flash-lite';
     
-    if (empty($apiKey)) {
-        throw new Exception('Gemini API key not configured');
+    $stmt->execute(['ai_enabled']);
+    $aiEnabled = $stmt->fetchColumn();
+    
+    if (empty($apiKey) || $aiEnabled !== 'enabled') {
+        // Use fallback calculation if AI is disabled or no API key
+        $baseValue = 500000;
+        $depreciationRate = 0.15;
+        $currentYear = date('Y');
+        $vehicleYear = $input['vehicleYear'] ?? $currentYear;
+        $age = max(0, $currentYear - $vehicleYear);
+        $marketValue = $baseValue * pow(1 - $depreciationRate, $age);
+        
+        echo json_encode([
+            'success' => true,
+            'market_value' => round($marketValue),
+            'explanation' => 'Calculated using depreciation model (AI disabled)',
+            'fallback' => true
+        ]);
+        exit;
     }
     
     // Prepare vehicle data for valuation

@@ -36,7 +36,7 @@ try {
     }
     
     // Create table if not exists
-    $createTable = "CREATE TABLE IF NOT EXISTS loan_applications (
+    $createTable = "CREATE TABLE IF NOT EXISTS loan_onboarding (
         id INT AUTO_INCREMENT PRIMARY KEY,
         mobile VARCHAR(15) NOT NULL,
         pan VARCHAR(10),
@@ -54,6 +54,7 @@ try {
         fuel_type VARCHAR(50),
         vehicle_color VARCHAR(50),
         vehicle_response JSON,
+        vehicle_value INT,
         income INT,
         employment VARCHAR(100),
         application_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
@@ -63,11 +64,11 @@ try {
     $pdo->exec($createTable);
     
     // Insert loan application
-    $stmt = $pdo->prepare("INSERT INTO loan_applications (
+    $stmt = $pdo->prepare("INSERT INTO loan_onboarding (
         mobile, pan, pan_name, pan_response, dob, gender, credit_score, credit_response,
         vehicle_rc, vehicle_model, vehicle_year, vehicle_make, owner_name, fuel_type, 
-        vehicle_color, vehicle_response, income, employment
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        vehicle_color, vehicle_response, vehicle_value, income, employment
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     $stmt->execute([
         $input['mobile'] ?? '',
@@ -86,6 +87,7 @@ try {
         $input['fuelType'] ?? '',
         $input['vehicleColor'] ?? '',
         json_encode($input['vehicleResponse'] ?? null),
+        $input['vehicleValue'] ?? 0,
         $input['income'] ?? 0,
         $input['employment'] ?? ''
     ]);
