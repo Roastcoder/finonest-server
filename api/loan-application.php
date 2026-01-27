@@ -1,19 +1,27 @@
 <?php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+// Debug: Log the request method
+error_log('Request method: ' . $_SERVER['REQUEST_METHOD']);
+
 require_once '../config/database.php';
 require_once '../middleware/cors.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    echo json_encode(['success' => true, 'message' => 'API is working', 'method' => 'GET']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed', 'received_method' => $_SERVER['REQUEST_METHOD']]);
     exit;
 }
 
