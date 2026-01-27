@@ -92,8 +92,10 @@ try {
     $totalRecords = $countStmt->fetchColumn();
     
     // Get applications with pagination
-    $stmt = $pdo->prepare("SELECT * FROM loan_onboarding ORDER BY created_at DESC LIMIT ? OFFSET ?");
-    $stmt->execute([$limit, $offset]);
+    $stmt = $pdo->prepare("SELECT * FROM loan_onboarding ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Parse JSON responses for display
