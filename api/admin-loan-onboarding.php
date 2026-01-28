@@ -91,7 +91,7 @@ try {
     $totalRecords = $countStmt->fetchColumn();
     
     // Get applications with pagination and limited fields
-    $stmt = $pdo->prepare("SELECT id, mobile, pan, pan_name, dob, gender, credit_score, 
+    $stmt = $pdo->prepare("SELECT id, mobile, email, pan, pan_name, dob, gender, credit_score, 
                           vehicle_rc, vehicle_model, vehicle_make, vehicle_year, fuel_type, 
                           vehicle_value, income, employment, application_status, 
                           created_at, updated_at 

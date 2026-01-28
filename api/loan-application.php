@@ -28,17 +28,25 @@ function callPanAPI($pan) {
     return json_decode($response, true);
 }
 
-function callCreditAPI($pan, $mobile, $firstName, $lastName, $gender, $dob) {
+function callCreditAPI($pan, $mobile, $firstName, $lastName, $gender, $dob, $email = null) {
     $url = 'https://api.finonest.com/api/credit-report.php';
+    
+    // Ensure required fields have default values
+    $email = $email ?: $mobile . '@example.com'; // Use provided email or generate from mobile
+    $firstName = $firstName ?: 'User';
+    $lastName = $lastName ?: 'Name';
+    $gender = $gender ? strtolower($gender) : 'male';
+    $dob = $dob ?: '1990-01-01';
+    
     $data = json_encode([
         'phone' => $mobile,
-        'email' => 'user@example.com',
+        'email' => $email,
         'pan' => $pan,
         'firstName' => $firstName,
         'lastName' => $lastName,
-        'gender' => strtolower($gender),
+        'gender' => $gender,
         'dateOfBirth' => $dob,
-        'pincode' => '600001'
+        'pincode' => '110001'
     ]);
     
     $ch = curl_init($url);
@@ -46,9 +54,14 @@ function callCreditAPI($pan, $mobile, $firstName, $lastName, $gender, $dob) {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     
     $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    
+    // Log the response for debugging
+    error_log('Credit API Response: ' . $response);
     
     return json_decode($response, true);
 }
@@ -83,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input || !isset($input['mobile']) || !isset($input['pan']) || !isset($input['vehicle_rc'])) {
-    echo json_encode(['success' => false, 'message' => 'Missing required fields: mobile, pan, vehicle_rc']);
+    echo json_encode(['success' => false, 'message' => 'Missing required fields: mobile, pan, vehicle_rc, email']);
     exit;
 }
 
@@ -97,6 +110,7 @@ try {
     
     // Auto-alter loan_onboarding table to add missing columns
     $alterQueries = [
+        "ALTER TABLE loan_onboarding ADD COLUMN email VARCHAR(255)",
         "ALTER TABLE loan_onboarding ADD COLUMN pan_response JSON",
         "ALTER TABLE loan_onboarding ADD COLUMN credit_response JSON", 
         "ALTER TABLE loan_onboarding ADD COLUMN vehicle_response JSON",
@@ -117,6 +131,7 @@ try {
     $createTable = "CREATE TABLE IF NOT EXISTS loan_onboarding (
         id INT AUTO_INCREMENT PRIMARY KEY,
         mobile VARCHAR(15) NOT NULL,
+        email VARCHAR(255),
         pan VARCHAR(10),
         pan_name VARCHAR(255),
         pan_response JSON,
@@ -155,7 +170,7 @@ try {
     // Call credit API with PAN data
     $firstName = explode(' ', $panName)[0] ?? '';
     $lastName = explode(' ', $panName)[1] ?? '';
-    $creditResponse = callCreditAPI($input['pan'], $input['mobile'], $firstName, $lastName, $gender, $dob);
+    $creditResponse = callCreditAPI($input['pan'], $input['mobile'], $firstName, $lastName, $gender, $dob, $input['email'] ?? null);
     
     // Extract data from responses
     $creditScore = $creditResponse['data']['SCORE']['FCIREXScore'] ?? null;
@@ -172,13 +187,14 @@ try {
     
     // Insert loan application with verification data
     $stmt = $pdo->prepare("INSERT INTO loan_onboarding (
-        mobile, pan, pan_name, pan_response, dob, gender, credit_score, credit_response,
+        mobile, email, pan, pan_name, pan_response, dob, gender, credit_score, credit_response,
         vehicle_rc, vehicle_model, vehicle_year, vehicle_make, owner_name, fuel_type, 
         vehicle_color, vehicle_response, vehicle_value, income, employment, application_id, step_completed
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     $stmt->execute([
         $input['mobile'],
+        $input['email'] ?? ($input['mobile'] . '@example.com'),
         $input['pan'],
         $panName,
         json_encode($panResponse),
