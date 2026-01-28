@@ -95,8 +95,106 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = json_decode(file_get_contents('php://input'), true);
 
-if (!$input || !isset($input['mobile']) || !isset($input['pan']) || !isset($input['vehicle_rc'])) {
-    echo json_encode(['success' => false, 'message' => 'Missing required fields: mobile, pan, vehicle_rc, email']);
+// Handle both direct API calls and frontend application data
+if (!$input || !isset($input['mobile'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing required field: mobile']);
+    exit;
+}
+
+// Check if this is a complete application from frontend or individual API call
+if (isset($input['applicationId']) || isset($input['submittedAt'])) {
+    // This is a complete application from frontend - save directly
+    try {
+        $database = new Database();
+        $pdo = $database->getConnection();
+        
+        if (!$pdo) {
+            throw new Exception('Database connection failed');
+        }
+        
+        // Create table if not exists
+        $createTable = "CREATE TABLE IF NOT EXISTS loan_onboarding (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            mobile VARCHAR(15) NOT NULL,
+            email VARCHAR(255),
+            pan VARCHAR(10),
+            pan_name VARCHAR(255),
+            pan_response JSON,
+            dob VARCHAR(20),
+            gender VARCHAR(10),
+            credit_score INT,
+            credit_response JSON,
+            vehicle_rc VARCHAR(20),
+            vehicle_model VARCHAR(255),
+            vehicle_year INT,
+            vehicle_make VARCHAR(255),
+            owner_name VARCHAR(255),
+            fuel_type VARCHAR(50),
+            vehicle_color VARCHAR(50),
+            vehicle_response JSON,
+            vehicle_value INT,
+            income INT,
+            employment VARCHAR(100),
+            application_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            application_id VARCHAR(20),
+            step_completed INT DEFAULT 6,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        $pdo->exec($createTable);
+        
+        // Insert application data directly
+        $stmt = $pdo->prepare("INSERT INTO loan_onboarding (
+            mobile, email, pan, pan_name, pan_response, dob, gender, credit_score, credit_response,
+            vehicle_rc, vehicle_model, vehicle_year, vehicle_make, owner_name, fuel_type, 
+            vehicle_color, vehicle_response, vehicle_value, income, employment, application_id, step_completed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $stmt->execute([
+            $input['mobile'],
+            $input['email'] ?? null,
+            $input['pan'] ?? null,
+            $input['panName'] ?? null,
+            json_encode($input['panResponse'] ?? null),
+            $input['dob'] ?? null,
+            $input['gender'] ?? null,
+            $input['creditScore'] ?? null,
+            json_encode($input['creditResponse'] ?? null),
+            $input['vehicleRC'] ?? null,
+            $input['vehicleModel'] ?? null,
+            $input['vehicleYear'] ?? null,
+            $input['vehicleMake'] ?? null,
+            $input['ownerName'] ?? null,
+            $input['fuelType'] ?? null,
+            $input['vehicleColor'] ?? null,
+            json_encode($input['vehicleResponse'] ?? null),
+            $input['vehicleValue'] ?? null,
+            $input['income'] ?? null,
+            $input['employment'] ?? null,
+            $input['applicationId'] ?? ('APP' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT)),
+            6
+        ]);
+        
+        $id = $pdo->lastInsertId();
+        
+        echo json_encode([
+            'success' => true,
+            'application_id' => $id,
+            'message' => 'Application saved successfully'
+        ]);
+        exit;
+        
+    } catch (Exception $e) {
+        error_log('Direct Application Save Error: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to save application', 'error' => $e->getMessage()]);
+        exit;
+    }
+}
+
+// Original API verification flow for individual calls
+if (!isset($input['pan']) || !isset($input['vehicle_rc'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing required fields: pan, vehicle_rc']);
     exit;
 }
 

@@ -20,6 +20,7 @@ RewriteRule ^api/leads/?(.*)$ api/leads.php [QSA,L]
 RewriteRule ^api/enrollments/?(.*)$ api/enrollments.php [QSA,L]
 RewriteRule ^api/settings/?(.*)$ api/settings.php [QSA,L]
 RewriteRule ^api/careers/?(.*)$ api/careers.php [QSA,L]
+RewriteRule ^api/loan-application/?(.*)$ api/loan-application.php [QSA,L]
 RewriteRule ^api/upload-image/?$ api/upload-image.php [QSA,L]
 
 # Serve uploaded images
