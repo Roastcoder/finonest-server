@@ -95,11 +95,14 @@ try {
         throw new Exception('Database connection failed');
     }
     
-    // Auto-alter loan_onboarding table to add missing JSON response columns
+    // Auto-alter loan_onboarding table to add missing columns
     $alterQueries = [
         "ALTER TABLE loan_onboarding ADD COLUMN pan_response JSON",
         "ALTER TABLE loan_onboarding ADD COLUMN credit_response JSON", 
-        "ALTER TABLE loan_onboarding ADD COLUMN vehicle_response JSON"
+        "ALTER TABLE loan_onboarding ADD COLUMN vehicle_response JSON",
+        "ALTER TABLE loan_onboarding ADD COLUMN application_id VARCHAR(20)",
+        "ALTER TABLE loan_onboarding ADD COLUMN step_completed INT DEFAULT 6",
+        "ALTER TABLE loan_onboarding ADD COLUMN vehicle_value INT"
     ];
     
     foreach ($alterQueries as $query) {
