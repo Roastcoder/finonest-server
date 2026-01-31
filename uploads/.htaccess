@@ -1,0 +1,17 @@
+Options +Indexes
+DirectoryIndex disabled
+
+<Files "*">
+    Order allow,deny
+    Allow from all
+</Files>
+
+# Allow image files
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
+    Header set Cache-Control "public, max-age=31536000"
+</FilesMatch>
+
+# Allow video files
+<FilesMatch "\.(mp4|avi|mov|wmv)$">
+    Header set Cache-Control "public, max-age=31536000"
+</FilesMatch>
