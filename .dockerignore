@@ -1,6 +1,14 @@
 node_modules
 .git
+<<<<<<< HEAD
 .gitignore
 README.md
 Dockerfile
 .dockerignore
+=======
+.env.local
+.env.development
+.env.test
+npm-debug.log*
+.DS_Store
+>>>>>>> 9dd5fdc51c4bd5f51a0ff9696279a4a8047d7845
