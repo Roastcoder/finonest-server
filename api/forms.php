@@ -127,12 +127,18 @@ function handleCourseEnrollment($auth_user, $enrollment_data) {
         )";
         $db->exec($createTable);
         
+        // Handle QR payment status
+        $payment_status = 'pending';
+        if ($enrollment_data['amount_paid'] == 0) {
+            $payment_status = 'completed';
+        } elseif (isset($enrollment_data['payment_details']['qr_payment']) && $enrollment_data['payment_details']['qr_payment']) {
+            $payment_status = 'pending'; // QR payments need manual verification
+        }
+        
         // Insert enrollment record
         $query = "INSERT INTO course_enrollments 
                   (user_id, course_id, course_title, amount_paid, payment_method, payment_id, payment_details, student_info, payment_status) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $payment_status = $enrollment_data['amount_paid'] == 0 ? 'completed' : 'pending';
         
         $stmt = $db->prepare($query);
         $stmt->execute([
@@ -149,11 +155,18 @@ function handleCourseEnrollment($auth_user, $enrollment_data) {
         
         $enrollment_id = $db->lastInsertId();
         
+        // Add special message for QR payments
+        $message = 'Course enrollment successful';
+        if (isset($enrollment_data['payment_details']['qr_payment']) && $enrollment_data['payment_details']['qr_payment']) {
+            $message = 'QR payment received. Enrollment pending verification.';
+        }
+        
         echo json_encode([
             'success' => true,
             'enrollment_id' => $enrollment_id,
-            'message' => 'Course enrollment successful',
-            'payment_status' => $payment_status
+            'message' => $message,
+            'payment_status' => $payment_status,
+            'requires_verification' => isset($enrollment_data['payment_details']['qr_payment']) && $enrollment_data['payment_details']['qr_payment']
         ]);
         
     } catch (Exception $e) {
