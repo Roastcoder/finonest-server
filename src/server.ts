@@ -13,29 +13,11 @@ process.on('SIGTERM', () => {
   });
 });
 
-async function start() {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ Connected to MongoDB');
-    
-    // Auto-seed data on startup
-    await autoSeedData();
-    
-    const server = app.listen(PORT, () => {
-      console.log(`🚀 Finonest API Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-    
-    // Handle server errors
-    server.on('error', (err) => {
-      console.error('❌ Server error:', err);
-      process.exit(1);
-    });
-    
-  } catch (err) {
-    console.error('❌ Failed to connect to MongoDB:', err);
-    process.exit(1);
-  }
-}
+// MongoDB connection disabled - using PHP/MySQL APIs instead
+console.log('⚠️  Node.js API server disabled - using PHP/MySQL APIs');
+console.log('✅ DSA APIs available at PHP endpoints');
 
-start();
+// Keep process alive but don't start server
+setInterval(() => {
+  // Keep alive
+}, 30000);
