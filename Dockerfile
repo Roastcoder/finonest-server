@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 FROM php:8.3-apache
 
 # Install PHP extensions
@@ -22,14 +21,3 @@ EXPOSE 80
 
 # Start Apache
 CMD ["apache2-foreground"]
-=======
-FROM node:18-alpine
-RUN apk add --no-cache python3 make g++ vips-dev
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm install -g tsx
-EXPOSE 4000
-CMD ["tsx", "src/server.ts"]
->>>>>>> 9dd5fdc51c4bd5f51a0ff9696279a4a8047d7845
