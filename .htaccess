@@ -9,6 +9,7 @@ RewriteRule ^api/(.*)$ cors_handler.php [QSA,L]
 RewriteRule ^api/auth/(.*)$ api/auth.php/$1 [QSA,L]
 RewriteRule ^api/user/(.*)$ api/user.php/$1 [QSA,L]
 RewriteRule ^api/forms/?(.*)$ api/forms.php [QSA,L]
+RewriteRule ^api/admin/dsa-applications/?(.*)$ api/admin/dsa-applications.php [QSA,L]
 RewriteRule ^api/admin/(.*)$ api/admin.php/$1 [QSA,L]
 RewriteRule ^api/branches/?(.*)$ api/branches.php [QSA,L]
 RewriteRule ^api/bankers/?(.*)$ api/bankers.php [QSA,L]
@@ -25,7 +26,6 @@ RewriteRule ^api/loan-onboarding-result/?(.*)$ api/loan-onboarding-result.php [Q
 RewriteRule ^api/loan-onboarding-pdf/?(.*)$ api/loan-onboarding-pdf.php [QSA,L]
 RewriteRule ^api/loan-application/?(.*)$ api/loan-application.php [QSA,L]
 RewriteRule ^api/dsa-registration/?$ api/dsa-registration.php [QSA,L]
-RewriteRule ^api/admin/dsa-applications/?(.*)$ api/admin/dsa-applications.php [QSA,L]
 RewriteRule ^api/upload-image/?$ api/upload-image.php [QSA,L]
 
 # Serve uploaded images
