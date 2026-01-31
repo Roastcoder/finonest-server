@@ -28,8 +28,8 @@ try {
         full_name VARCHAR(255) NOT NULL,
         mobile_number VARCHAR(20) NOT NULL,
         email VARCHAR(255) NOT NULL,
-        pan_number VARCHAR(10) NOT NULL,
-        aadhar_number VARCHAR(12) NOT NULL,
+        pan_number VARCHAR(10) NULL,
+        aadhar_number VARCHAR(12) NULL,
         date_of_birth DATE NOT NULL,
         address TEXT NOT NULL,
         city VARCHAR(100) NOT NULL,
@@ -41,9 +41,9 @@ try {
         business_type ENUM('individual', 'firm') NOT NULL,
         gst_number VARCHAR(15),
         firm_name VARCHAR(255),
-        bank_name VARCHAR(255) NOT NULL,
-        account_number VARCHAR(50) NOT NULL,
-        ifsc_code VARCHAR(11) NOT NULL,
+        bank_name VARCHAR(255) NULL,
+        account_number VARCHAR(50) NULL,
+        ifsc_code VARCHAR(11) NULL,
         preferred_products JSON,
         target_monthly_cases VARCHAR(50),
         coverage_area VARCHAR(255),
@@ -62,10 +62,9 @@ try {
     }
     
     // Validate required fields
-    $required = ['full_name', 'mobile_number', 'email', 'pan_number', 'aadhar_number', 
-                'date_of_birth', 'address', 'city', 'state', 'pincode', 
-                'current_profession', 'experience_years', 'business_type',
-                'bank_name', 'account_number', 'ifsc_code'];
+    $required = ['full_name', 'mobile_number', 'email', 'date_of_birth', 
+                'address', 'city', 'state', 'pincode', 
+                'current_profession', 'experience_years', 'business_type'];
     
     foreach ($required as $field) {
         if (empty($input[$field])) {
@@ -100,8 +99,8 @@ try {
         $input['full_name'],
         $input['mobile_number'],
         $input['email'],
-        $input['pan_number'],
-        $input['aadhar_number'],
+        $input['pan_number'] ?? null,
+        $input['aadhar_number'] ?? null,
         $input['date_of_birth'],
         $input['address'],
         $input['city'],
@@ -113,9 +112,9 @@ try {
         $input['business_type'],
         $input['gst_number'] ?? null,
         $input['firm_name'] ?? null,
-        $input['bank_name'],
-        $input['account_number'],
-        $input['ifsc_code'],
+        $input['bank_name'] ?? null,
+        $input['account_number'] ?? null,
+        $input['ifsc_code'] ?? null,
         json_encode($input['preferred_products']),
         $input['target_monthly_cases'] ?? null,
         $input['coverage_area'] ?? null,

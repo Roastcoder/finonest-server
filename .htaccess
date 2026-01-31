@@ -23,6 +23,8 @@ RewriteRule ^api/careers/?(.*)$ api/careers.php [QSA,L]
 RewriteRule ^api/loan-onboarding-result/?(.*)$ api/loan-onboarding-result.php [QSA,L]
 RewriteRule ^api/loan-onboarding-pdf/?(.*)$ api/loan-onboarding-pdf.php [QSA,L]
 RewriteRule ^api/loan-application/?(.*)$ api/loan-application.php [QSA,L]
+RewriteRule ^api/dsa-registration/?$ api/dsa-registration.php [QSA,L]
+RewriteRule ^api/admin/dsa-applications/?(.*)$ api/admin/dsa-applications.php [QSA,L]
 RewriteRule ^api/upload-image/?$ api/upload-image.php [QSA,L]
 
 # Serve uploaded images
